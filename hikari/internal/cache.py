@@ -72,7 +72,6 @@ if typing.TYPE_CHECKING:
     from hikari import traits
     from hikari import users as users_
     from hikari.interactions import bases as interaction_bases
-    from hikari.interactions import components as component_interactions
 
 ChannelT = typing.TypeVar("ChannelT", bound="channels_.GuildChannel")
 DataT = typing.TypeVar("DataT", bound="BaseData[typing.Any]")
@@ -771,7 +770,7 @@ class MessageData(BaseData[messages.Message]):
     referenced_message: typing.Optional[RefCell[MessageData]] = attr.field()
     interaction: typing.Optional[MessageInteractionData] = attr.field()
     application_id: typing.Optional[snowflakes.Snowflake] = attr.field()
-    components: typing.Tuple[component_interactions.PartialComponent, ...] = attr.field()
+    components: typing.Tuple[messages.PartialComponent, ...] = attr.field()
 
     @classmethod
     def build_from_entity(
@@ -886,6 +885,9 @@ class MessageData(BaseData[messages.Message]):
 
         if message.embeds is not undefined.UNDEFINED:
             self.embeds = tuple(map(_copy_embed, message.embeds))
+
+        if message.components is not undefined.UNDEFINED:
+            self.components = tuple(message.components)
 
         self.mentions.update(message.mentions, users=mention_users)
 
