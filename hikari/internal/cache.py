@@ -764,7 +764,7 @@ class MessageData(BaseData[messages.Message]):
     activity: typing.Optional[messages.MessageActivity] = attr.field()
     application: typing.Optional[messages.MessageApplication] = attr.field()
     message_reference: typing.Optional[messages.MessageReference] = attr.field()
-    flags: typing.Optional[messages.MessageFlag] = attr.field()
+    flags: messages.MessageFlag = attr.field()
     stickers: typing.Tuple[messages.Sticker, ...] = attr.field()
     nonce: typing.Optional[str] = attr.field()
     referenced_message: typing.Optional[RefCell[MessageData]] = attr.field()

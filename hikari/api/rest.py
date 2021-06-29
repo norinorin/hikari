@@ -1054,10 +1054,12 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
         content: undefined.UndefinedOr[typing.Any] = undefined.UNDEFINED,
         *,
-        embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
-        embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
         attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
+        component: undefined.UndefinedOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
+        components: undefined.UndefinedOr[typing.Sequence[special_endpoints.ComponentBuilder]] = undefined.UNDEFINED,
+        embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         nonce: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         reply: undefined.UndefinedOr[snowflakes.SnowflakeishOr[messages_.PartialMessage]] = undefined.UNDEFINED,
@@ -1092,16 +1094,21 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Other Parameters
         ----------------
-        embed : hikari.undefined.UndefinedOr[hikari.embeds.Embed]
-            If provided, the message embed.
-        embeds : hikari.undefined.UndefinedOr[typing.Sequence[hikari.embeds.Embed]]
-            If provided, the message embeds.
         attachment : hikari.undefined.UndefinedOr[hikari.files.Resourceish],
             If provided, the message attachment. This can be a resource,
             or string of a path on your computer or a URL.
         attachments : hikari.undefined.UndefinedOr[typing.Sequence[hikari.files.Resourceish]],
             If provided, the message attachments. These can be resources, or
             strings consisting of paths on your computer or URLs.
+        component : hikari.undefined.UndefinedOr[hikari.api.special_endpoints.ComponentBuilder]
+            If provided, builder object of the component to include in this message.
+        components : hikari.undefined.UndefinedOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
+            If provided, a sequence of the component builder objects to include
+            in this message.
+        embed : hikari.undefined.UndefinedOr[hikari.embeds.Embed]
+            If provided, the message embed.
+        embeds : hikari.undefined.UndefinedOr[typing.Sequence[hikari.embeds.Embed]]
+            If provided, the message embeds.
         tts : hikari.undefined.UndefinedOr[builtins.bool]
             If provided, whether the message will be read out by a screen
             reader using Discord's TTS (text-to-speech) system.
@@ -1183,7 +1190,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             2000 characters in them, embeds that exceed one of the many embed
             limits; too many attachments; attachments that are too large;
             invalid image URLs in embeds; if `reply` is ot found or not in the
-            same channel as `channel`.
+            same channel as `channel`; too many components.
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.ForbiddenError
@@ -1261,10 +1268,14 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
         content: undefined.UndefinedOr[typing.Any] = undefined.UNDEFINED,
         *,
-        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
-        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
         attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
+        component: undefined.UndefinedNoneOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
+        components: undefined.UndefinedNoneOr[
+            typing.Sequence[special_endpoints.ComponentBuilder]
+        ] = undefined.UNDEFINED,
+        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         replace_attachments: bool = False,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         mentions_reply: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -1302,18 +1313,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Other Parameters
         ----------------
-        embed : hikari.undefined.UndefinedNoneOr[hikari.embeds.Embed]
-            If provided, the embed to set on the message. If
-            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
-            If this is `builtins.None` then any present embeds are removed.
-            Otherwise, the new embed that was provided will be used as the
-            replacement.
-        embeds : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.embeds.Embed]]
-            If provided, the embeds to set on the message. If
-            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
-            If this is `builtins.None` then any present embeds are removed.
-            Otherwise, the new embeds that were provided will be used as the
-            replacement.
         attachment : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
             If provided, the attachment to set on the message. If
             `hikari.undefined.UNDEFINED`, the previous attachment, if
@@ -1326,6 +1325,27 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             present, are not changed. If this is `builtins.None`, then the
             attachments is removed, if present. Otherwise, the new attachments
             that were provided will be attached.
+        component : hikari.undefined.UndefinedNoneOr[hikari.api.special_endpoints.ComponentBuilder]
+            If provided, builder object of the component to set for this message.
+            This component will replace any previously set components and passing
+            `builtins.None` will remove all components.
+        components : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
+            If provided, a sequence of the component builder objects set for
+            this message. These components will replace any previously set
+            components and passing `builtins.None` or an empty sequence will
+            remove all components.
+        embed : hikari.undefined.UndefinedNoneOr[hikari.embeds.Embed]
+            If provided, the embed to set on the message. If
+            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
+            If this is `builtins.None` then any present embeds are removed.
+            Otherwise, the new embed that was provided will be used as the
+            replacement.
+        embeds : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.embeds.Embed]]
+            If provided, the embeds to set on the message. If
+            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
+            If this is `builtins.None` then any present embeds are removed.
+            Otherwise, the new embeds that were provided will be used as the
+            replacement.
         replace_attachments: bool
             Whether to replace the attachments with the provided ones. Defaults
             to `builtins.False`.
@@ -2130,10 +2150,12 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         *,
         username: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         avatar_url: undefined.UndefinedOr[str] = undefined.UNDEFINED,
-        embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
-        embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
         attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
+        component: undefined.UndefinedOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
+        components: undefined.UndefinedOr[typing.Sequence[special_endpoints.ComponentBuilder]] = undefined.UNDEFINED,
+        embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         user_mentions: undefined.UndefinedOr[
@@ -2176,16 +2198,21 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         avatar_url : hikari.undefined.UndefinedOr[builtins.str]
             If provided, the url of an image to override the webhook's
             avatar with for this request.
-        embed : hikari.undefined.UndefinedOr[hikari.embeds.Embed]
-            If provided, the message embed.
-        embeds : hikari.undefined.UndefinedOr[typing.Sequence[hikari.embeds.Embed]]
-            If provided, the message embeds.
         attachment : hikari.undefined.UndefinedOr[hikari.files.Resourceish],
             If provided, the message attachment. This can be a resource,
             or string of a path on your computer or a URL.
         attachments : hikari.undefined.UndefinedOr[typing.Sequence[hikari.files.Resourceish]],
             If provided, the message attachments. These can be resources, or
             strings consisting of paths on your computer or URLs.
+        component : hikari.undefined.UndefinedOr[hikari.api.special_endpoints.ComponentBuilder]
+            If provided, builder object of the component to include in this message.
+        components : hikari.undefined.UndefinedOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
+            If provided, a sequence of the component builder objects to include
+            in this message.
+        embed : hikari.undefined.UndefinedOr[hikari.embeds.Embed]
+            If provided, the message embed.
+        embeds : hikari.undefined.UndefinedOr[typing.Sequence[hikari.embeds.Embed]]
+            If provided, the message embeds.
         tts : hikari.undefined.UndefinedOr[builtins.bool]
             If provided, whether the message will be read out by a screen
             reader using Discord's TTS (text-to-speech) system.
@@ -2271,7 +2298,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             being empty with no attachments or embeds; messages with more than
             2000 characters in them, embeds that exceed one of the many embed
             limits; too many attachments; attachments that are too large;
-            invalid image URLs in embeds.
+            invalid image URLs in embeds; too many components.
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.NotFoundError
@@ -2345,10 +2372,14 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         message: snowflakes.SnowflakeishOr[messages_.Message],
         content: undefined.UndefinedNoneOr[typing.Any] = undefined.UNDEFINED,
         *,
-        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
-        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
         attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
+        component: undefined.UndefinedNoneOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
+        components: undefined.UndefinedNoneOr[
+            typing.Sequence[special_endpoints.ComponentBuilder]
+        ] = undefined.UNDEFINED,
+        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         replace_attachments: bool = False,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         user_mentions: undefined.UndefinedOr[
@@ -2386,18 +2417,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Other Parameters
         ----------------
-        embed : hikari.undefined.UndefinedNoneOr[hikari.embeds.Embed]
-            If provided, the embed to set on the message. If
-            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
-            If this is `builtins.None` then any present embeds are removed.
-            Otherwise, the new embed that was provided will be used as the
-            replacement.
-        embeds : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.embeds.Embed]]
-            If provided, the embeds to set on the message. If
-            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
-            If this is `builtins.None` then any present embeds are removed.
-            Otherwise, the new embeds that were provided will be used as the
-            replacement.
         attachment : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
             If provided, the attachment to set on the message. If
             `hikari.undefined.UNDEFINED`, the previous attachment, if
@@ -2410,6 +2429,27 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             present, are not changed. If this is `builtins.None`, then the
             attachments is removed, if present. Otherwise, the new attachments
             that were provided will be attached.
+        component : hikari.undefined.UndefinedNoneOr[hikari.api.special_endpoints.ComponentBuilder]
+            If provided, builder object of the component to set for this message.
+            This component will replace any previously set components and passing
+            `builtins.None` will remove all components.
+        components : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
+            If provided, a sequence of the component builder objects set for
+            this message. These components will replace any previously set
+            components and passing `builtins.None` or an empty sequence will
+            remove all components.
+        embed : hikari.undefined.UndefinedNoneOr[hikari.embeds.Embed]
+            If provided, the embed to set on the message. If
+            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
+            If this is `builtins.None` then any present embeds are removed.
+            Otherwise, the new embed that was provided will be used as the
+            replacement.
+        embeds : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.embeds.Embed]]
+            If provided, the embeds to set on the message. If
+            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
+            If this is `builtins.None` then any present embeds are removed.
+            Otherwise, the new embeds that were provided will be used as the
+            replacement.
         replace_attachments: bool
             Whether to replace the attachments with the provided ones. Defaults
             to `builtins.False`.
@@ -2478,7 +2518,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             being empty with no attachments or embeds; messages with more than
             2000 characters in them, embeds that exceed one of the many embed
             limits; too many attachments; attachments that are too large;
-            invalid image URLs in embeds.
+            invalid image URLs in embeds; too many components.
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.NotFoundError
@@ -6482,6 +6522,8 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         *,
         flags: typing.Union[int, messages_.MessageFlag, undefined.UndefinedType] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+        component: undefined.UndefinedOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
+        components: undefined.UndefinedOr[typing.Sequence[special_endpoints.ComponentBuilder]] = undefined.UNDEFINED,
         embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
         embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -6521,6 +6563,11 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             no `embeds` kwarg is provided, then this will instead
             update the embed. This allows for simpler syntax when
             sending an embed alone.
+        component : hikari.undefined.UndefinedOr[hikari.api.special_endpoints.ComponentBuilder]
+            If provided, builder object of the component to include in this message.
+        components : hikari.undefined.UndefinedOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
+            If provided, a sequence of the component builder objects to include
+            in this message.
         embed : hikari.undefined.UndefinedOr[hikari.embeds.Embed]
             If provided, the message embed.
         embeds : hikari.undefined.UndefinedOr[typing.Sequence[hikari.embeds.Embed]]
@@ -6592,10 +6639,14 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         token: str,
         content: undefined.UndefinedNoneOr[typing.Any] = undefined.UNDEFINED,
         *,
-        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
-        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
         attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
+        component: undefined.UndefinedNoneOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
+        components: undefined.UndefinedNoneOr[
+            typing.Sequence[special_endpoints.ComponentBuilder]
+        ] = undefined.UNDEFINED,
+        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         replace_attachments: bool = False,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         user_mentions: undefined.UndefinedOr[
@@ -6629,18 +6680,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             `attachments` kwargs are provided, the values will be overwritten.
             This allows for simpler syntax when sending an embed or an
             attachment alone.
-        embed : hikari.undefined.UndefinedNoneOr[hikari.embeds.Embed]
-            If provided, the embed to set on the message. If
-            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
-            If this is `builtins.None` then any present embeds are removed.
-            Otherwise, the new embed that was provided will be used as the
-            replacement.
-        embeds : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.embeds.Embed]]
-            If provided, the embeds to set on the message. If
-            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
-            If this is `builtins.None` then any present embeds are removed.
-            Otherwise, the new embeds that were provided will be used as the
-            replacement.
         attachment : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
             If provided, the attachment to set on the message. If
             `hikari.undefined.UNDEFINED`, the previous attachment, if
@@ -6653,6 +6692,27 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             present, are not changed. If this is `builtins.None`, then the
             attachments is removed, if present. Otherwise, the new attachments
             that were provided will be attached.
+        component : hikari.undefined.UndefinedNoneOr[hikari.api.special_endpoints.ComponentBuilder]
+            If provided, builder object of the component to set for this message.
+            This component will replace any previously set components and passing
+            `builtins.None` will remove all components.
+        components : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
+            If provided, a sequence of the component builder objects set for
+            this message. These components will replace any previously set
+            components and passing `builtins.None` or an empty sequence will
+            remove all components.
+        embed : hikari.undefined.UndefinedNoneOr[hikari.embeds.Embed]
+            If provided, the embed to set on the message. If
+            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
+            If this is `builtins.None` then any present embeds are removed.
+            Otherwise, the new embed that was provided will be used as the
+            replacement.
+        embeds : hikari.undefined.UndefinedNoneOr[typing.Sequence[hikari.embeds.Embed]]
+            If provided, the embeds to set on the message. If
+            `hikari.undefined.UNDEFINED`, the previous embed(s) are not changed.
+            If this is `builtins.None` then any present embeds are removed.
+            Otherwise, the new embeds that were provided will be used as the
+            replacement.
         replace_attachments: bool
             Whether to replace the attachments with the provided ones. Defaults
             to `builtins.False`.
@@ -6709,7 +6769,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             being empty with no attachments or embeds; messages with more than
             2000 characters in them, embeds that exceed one of the many embed
             limits; too many attachments; attachments that are too large;
-            invalid image URLs in embeds.
+            invalid image URLs in embeds; too many components.
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.NotFoundError
@@ -6761,4 +6821,13 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             nature, and will trigger this exception if they occur.
         hikari.errors.InternalServerError
             If an internal error occurs on Discord while handling the request.
+        """
+
+    def build_action_row_component(self) -> special_endpoints.ActionRowBuilder:
+        """Build an action row message component for use in message create and REST calls.
+
+        Returns
+        -------
+        hikari.api.special_endpoints.ActionRowBuilder
+            The initialised action row builder.
         """

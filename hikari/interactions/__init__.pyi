@@ -2,3 +2,4 @@
 
 from hikari.interactions.bases import *
 from hikari.interactions.commands import *
+from hikari.interactions.components import *
