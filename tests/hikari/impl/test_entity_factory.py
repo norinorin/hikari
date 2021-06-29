@@ -3429,6 +3429,7 @@ class TestEntityFactoryImpl:
         partial_application_payload,
         embed_payload,
         referenced_message,
+        action_row_payload,
     ):
         member_payload = member_payload.copy()
         del member_payload["user"]
@@ -3488,6 +3489,7 @@ class TestEntityFactoryImpl:
             "nonce": "171000788183678976",
             "application_id": "123123123123",
             "interaction": {"id": "123123123", "type": 2, "name": "OKOKOK", "user": user_payload},
+            "components": [action_row_payload],
         }
 
     def test_deserialize_partial_message(
@@ -3501,6 +3503,7 @@ class TestEntityFactoryImpl:
         custom_emoji_payload,
         embed_payload,
         referenced_message,
+        action_row_payload,
     ):
         partial_message = entity_factory_impl.deserialize_partial_message(message_payload)
 
@@ -3597,6 +3600,8 @@ class TestEntityFactoryImpl:
         assert partial_message.interaction.user == entity_factory_impl.deserialize_user(user_payload)
         assert isinstance(partial_message.interaction, message_models.MessageInteraction)
 
+        assert partial_message.components == [entity_factory_impl.deserialize_component(action_row_payload)]
+
     def test_deserialize_partial_message_with_partial_fields(self, entity_factory_impl, message_payload):
         message_payload["content"] = ""
         message_payload["edited_timestamp"] = None
@@ -3653,8 +3658,9 @@ class TestEntityFactoryImpl:
         assert partial_message.nonce is undefined.UNDEFINED
         assert partial_message.application_id is undefined.UNDEFINED
         assert partial_message.interaction is undefined.UNDEFINED
+        assert partial_message.components is undefined.UNDEFINED
 
-    def test_deserialize_full_message(
+    def test_deserialize_message(
         self,
         entity_factory_impl,
         mock_app,
@@ -3665,6 +3671,7 @@ class TestEntityFactoryImpl:
         custom_emoji_payload,
         embed_payload,
         referenced_message,
+        action_row_payload,
     ):
         message = entity_factory_impl.deserialize_message(message_payload)
 
@@ -3759,6 +3766,8 @@ class TestEntityFactoryImpl:
         assert message.interaction.user == entity_factory_impl.deserialize_user(user_payload)
         assert isinstance(message.interaction, message_models.MessageInteraction)
 
+        assert message.components == [entity_factory_impl.deserialize_component(action_row_payload)]
+
     def test_deserialize_message_with_null_and_unset_fields(
         self,
         entity_factory_impl,
@@ -3805,6 +3814,7 @@ class TestEntityFactoryImpl:
         assert message.nonce is None
         assert message.application_id is None
         assert message.interaction is None
+        assert message.components == []
 
     def test_deserialize_message_with_other_unset_fields(self, entity_factory_impl, message_payload):
         message_payload["application"]["primary_sku_id"] = None

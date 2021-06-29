@@ -63,6 +63,7 @@ if typing.TYPE_CHECKING:
     from hikari import users as users_
     from hikari.api import special_endpoints
     from hikari.interactions import bases as interaction_bases
+    from hikari.interactions import components as component_interactions
 
 _T = typing.TypeVar("_T")
 
@@ -659,6 +660,11 @@ class PartialMessage(snowflakes.Unique):
     !!! note
         This will only be provided for interaction messages.
     """
+
+    components: undefined.UndefinedOr[typing.Sequence[component_interactions.PartialComponent]] = attr.field(
+        hash=False, repr=False
+    )
+    """Sequence of the components attached to this message."""
 
     @property
     def guild_id(self) -> typing.Optional[snowflakes.Snowflake]:
@@ -1352,3 +1358,6 @@ class Message(PartialMessage):
     !!! note
         This will only be provided for interaction messages.
     """
+
+    components: typing.Sequence[component_interactions.PartialComponent]
+    """Sequence of the components attached to this message."""
