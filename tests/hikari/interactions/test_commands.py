@@ -155,16 +155,77 @@ class TestCommandInteraction:
 
     @pytest.mark.asyncio()
     async def test_fetch_channel(self, mock_command_interaction, mock_app):
-        mock_app.rest.fetch_channel.return_value = mock.Mock(channels.GuildChannel)
+        mock_app.rest.fetch_channel.return_value = mock.Mock(channels.TextChannel)
         assert await mock_command_interaction.fetch_channel() is mock_app.rest.fetch_channel.return_value
 
         mock_app.rest.fetch_channel.assert_awaited_once_with(3123123)
 
     def test_get_channel(self, mock_command_interaction, mock_app):
+        mock_app.cache.get_guild_channel.return_value = mock.Mock(channels.GuildTextChannel)
+
         assert mock_command_interaction.get_channel() is mock_app.cache.get_guild_channel.return_value
+
         mock_app.cache.get_guild_channel.assert_called_once_with(3123123)
 
     def test_get_channel_without_cache(self, mock_command_interaction):
         mock_command_interaction.app = mock.Mock(traits.RESTAware)
 
         assert mock_command_interaction.get_channel() is None
+
+    @pytest.mark.asyncio()
+    async def test_fetch_command_for_guild_command(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = 342123
+
+        assert await mock_command_interaction.fetch_command() is mock_app.rest.fetch_application_command.return_value
+
+        mock_app.rest.fetch_application_command.assert_awaited_once_with(
+            application=43123, command=2312312, guild=342123
+        )
+
+    @pytest.mark.asyncio()
+    async def test_fetch_command_for_dm_command(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = None
+
+        assert await mock_command_interaction.fetch_command() is mock_app.rest.fetch_application_command.return_value
+
+        mock_app.rest.fetch_application_command.assert_awaited_once_with(
+            application=43123, command=2312312, guild=undefined.UNDEFINED
+        )
+
+    @pytest.mark.asyncio()
+    async def test_fetch_guild(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = 43123123
+
+        assert await mock_command_interaction.fetch_guild() is mock_app.rest.fetch_guild.return_value
+
+        mock_app.rest.fetch_guild.assert_awaited_once_with(43123123)
+
+    @pytest.mark.asyncio()
+    async def test_fetch_guild_for_dm_interaction(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = None
+
+        assert await mock_command_interaction.fetch_guild() is None
+
+        mock_app.rest.fetch_guild.assert_not_called()
+
+    def test_get_guild(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = 874356
+
+        assert mock_command_interaction.get_guild() is mock_app.cache.get_guild.return_value
+
+        mock_app.cache.get_guild.assert_called_once_with(874356)
+
+    def test_get_guild_for_dm_interaction(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = None
+
+        assert mock_command_interaction.get_guild() is None
+
+        mock_app.cache.get_guild.assert_not_called()
+
+    def test_get_guild_when_cacheless(self, mock_command_interaction, mock_app):
+        mock_command_interaction.guild_id = 321123
+        mock_command_interaction.app = mock.Mock(traits.RESTAware)
+
+        assert mock_command_interaction.get_guild() is None
+
+        mock_app.cache.get_guild.assert_not_called()

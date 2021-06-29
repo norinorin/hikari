@@ -469,12 +469,12 @@ class CommandInteraction(bases.MessageResponseMixin[CommandResponseTypesT]):
         """
         return self.app.rest.interaction_deferred_builder(bases.ResponseType.DEFERRED_MESSAGE_CREATE)
 
-    async def fetch_channel(self) -> channels.PartialChannel:
+    async def fetch_channel(self) -> channels.TextChannel:
         """Fetch the guild channel this was triggered in.
 
         Returns
         -------
-        hikari.channels.PartialChannel
+        hikari.channels.TextChannel
             The requested partial channel derived object of the channel this was
             triggered in.
 
@@ -503,9 +503,11 @@ class CommandInteraction(bases.MessageResponseMixin[CommandResponseTypesT]):
         hikari.errors.InternalServerError
             If an internal error occurs on Discord while handling the request.
         """
-        return await self.app.rest.fetch_channel(self.channel_id)
+        channel = await self.app.rest.fetch_channel(self.channel_id)
+        assert isinstance(channel, channels.TextChannel)
+        return channel
 
-    def get_channel(self) -> typing.Optional[channels.GuildChannel]:
+    def get_channel(self) -> typing.Union[channels.GuildTextChannel, channels.GuildNewsChannel, None]:
         """Get the guild channel this was triggered in from the cache.
 
         !!! note
@@ -514,11 +516,96 @@ class CommandInteraction(bases.MessageResponseMixin[CommandResponseTypesT]):
 
         Returns
         -------
-        typing.Optional[hikari.channels.GuildChannel]
+        typing.Union[hikari.channels.GuildTextChannel, hikari.channels.GuildNewsChannel, builtins.None]
             The object of the guild channel that was found in the cache or
             `builtins.None`.
         """
+        if isinstance(self.app, traits.CacheAware):
+            channel = self.app.cache.get_guild_channel(self.channel_id)
+            assert isinstance(channel, (channels.GuildTextChannel, channels.GuildNewsChannel))
+            return channel
+
+        return None
+
+    async def fetch_command(self) -> Command:
+        """Fetch the command which triggered this interaction.
+
+        Returns
+        -------
+        hikari.interactions.commands.Command
+            Object of this interaction's command.
+
+        Raises
+        ------
+        hikari.errors.ForbiddenError
+            If you cannot access the target command.
+        hikari.errors.NotFoundError
+            If the command isn't found.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+        return await self.app.rest.fetch_application_command(
+            application=self.application_id, command=self.id, guild=self.guild_id or undefined.UNDEFINED
+        )
+
+    async def fetch_guild(self) -> typing.Optional[guilds.RESTGuild]:
+        """Fetch the guild this interaction happened in.
+
+        Returns
+        -------
+        typing.Optional[hikari.guilds.RESTGuild]
+            Object of the guild this interaction happened in or `builtins.None`
+            if this occurred within a DM channel.
+
+        Raises
+        ------
+        hikari.errors.ForbiddenError
+            If you are not part of the guild.
+        hikari.errors.NotFoundError
+            If the guild is not found.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+        if not self.guild_id:
+            return None
+
+        return await self.app.rest.fetch_guild(self.guild_id)
+
+    def get_guild(self) -> typing.Optional[guilds.GatewayGuild]:
+        """Get the object of this interaction's guild guild from the cache.
+
+        Returns
+        -------
+        typing.Optional[hikari.guilds.GatewayGuild]
+            The object of the guild if found, else `builtins.None`.
+        """
         if self.guild_id and isinstance(self.app, traits.CacheAware):
-            return self.app.cache.get_guild_channel(self.channel_id)
+            return self.app.cache.get_guild(self.guild_id)
 
         return None
