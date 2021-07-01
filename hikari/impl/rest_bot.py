@@ -51,7 +51,7 @@ if typing.TYPE_CHECKING:
     from hikari.api import special_endpoints
     from hikari.interactions import bases as interaction_bases
     from hikari.interactions import commands
-    from hikari.interactions import components
+    from hikari.interactions import component_interactions
 
     _InteractionT_co = typing.TypeVar("_InteractionT_co", bound=interaction_bases.PartialInteraction, covariant=True)
     _MessageResponseBuilderT = typing.Union[
@@ -570,8 +570,10 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
 
     @typing.overload
     def get_listener(
-        self, interaction_type: typing.Type[components.ComponentInteraction], /
-    ) -> typing.Optional[interaction_server_.ListenerT[components.ComponentInteraction, _MessageResponseBuilderT]]:
+        self, interaction_type: typing.Type[component_interactions.ComponentInteraction], /
+    ) -> typing.Optional[
+        interaction_server_.ListenerT[component_interactions.ComponentInteraction, _MessageResponseBuilderT]
+    ]:
         ...
 
     def get_listener(
@@ -593,9 +595,9 @@ class RESTBot(traits.RESTBotAware, interaction_server_.InteractionServer):
     @typing.overload
     def set_listener(
         self,
-        interaction_type: typing.Type[components.ComponentInteraction],
+        interaction_type: typing.Type[component_interactions.ComponentInteraction],
         listener: typing.Optional[
-            interaction_server_.ListenerT[components.ComponentInteraction, _MessageResponseBuilderT]
+            interaction_server_.ListenerT[component_interactions.ComponentInteraction, _MessageResponseBuilderT]
         ],
         /,
         *,

@@ -47,7 +47,7 @@ from hikari import webhooks as webhook_models
 from hikari.impl import entity_factory
 from hikari.interactions import bases as interaction_models
 from hikari.interactions import commands as command_models
-from hikari.interactions import components as component_interactions
+from hikari.interactions import component_interactions
 
 
 def test__with_int_cast():
