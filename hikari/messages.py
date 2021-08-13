@@ -62,7 +62,7 @@ from hikari.internal import routes
 if typing.TYPE_CHECKING:
     import datetime
 
-    from hikari import channels
+    from hikari import channels as channels_
     from hikari import embeds as embeds_
     from hikari import emojis as emojis_
     from hikari import users as users_
@@ -314,7 +314,7 @@ class Mentions:
     role_ids: undefined.UndefinedOr[typing.Sequence[snowflakes.Snowflake]] = attr.field()
     """IDs of roles that were notified by their mention in the message."""
 
-    channels: undefined.UndefinedOr[typing.Mapping[snowflakes.Snowflake, channels.PartialChannel]] = attr.field()
+    channels: undefined.UndefinedOr[typing.Mapping[snowflakes.Snowflake, channels_.PartialChannel]] = attr.field()
     """Channel mentions that reference channels in the target crosspost's guild.
 
     If the message is not crossposted, this will always be empty.
@@ -337,8 +337,7 @@ class Mentions:
 
         return list(self.users.keys())
 
-    @property
-    def members(self) -> undefined.UndefinedOr[typing.Mapping[snowflakes.Snowflake, guilds.Member]]:
+    def get_members(self) -> undefined.UndefinedOr[typing.Mapping[snowflakes.Snowflake, guilds.Member]]:
         """Discover any cached members notified by this message.
 
         If this message was sent in a DM, this will always be empty.
@@ -372,8 +371,7 @@ class Mentions:
 
         return {}
 
-    @property
-    def roles(self) -> typing.Mapping[snowflakes.Snowflake, guilds.Role]:
+    def get_roles(self) -> undefined.UndefinedOr[typing.Mapping[snowflakes.Snowflake, guilds.Role]]:
         """Attempt to look up the roles that are notified by this message.
 
         If this message was sent in a DM, this will always be empty.
@@ -395,10 +393,13 @@ class Mentions:
             in `notifies_role_ids` may not be present here. This is a limitation
             of Discord, again.
         """
+        if self.role_ids is undefined.UNDEFINED:
+            return undefined.UNDEFINED
+
         if isinstance(self._message.app, traits.CacheAware) and self._message.guild_id is not None:
             app = self._message.app
             return self._map_cache_maybe_discover(
-                self.roles,
+                self.role_ids,
                 app.cache.get_role,
             )
 
@@ -795,7 +796,7 @@ class PartialMessage(snowflakes.Unique):
     components: undefined.UndefinedOr[typing.Sequence[PartialComponent]] = attr.field(hash=False, repr=False)
     """Sequence of the components attached to this message."""
 
-    @property
+    @property  # TODO: update this while refactoring message structure
     def guild_id(self) -> typing.Optional[snowflakes.Snowflake]:
         """ID of the guild that the message was sent in.
 
@@ -835,10 +836,11 @@ class PartialMessage(snowflakes.Unique):
         builtins.str
             The jump link to the message.
         """
+        # TODO: this doesn't seem like a safe assumption for rest only applications
         guild_id_str = "@me" if guild is None else str(int(guild))
         return f"{urls.BASE_URL}/channels/{guild_id_str}/{self.channel_id}/{self.id}"
 
-    async def fetch_channel(self) -> channels.PartialChannel:
+    async def fetch_channel(self) -> channels_.PartialChannel:
         """Fetch the channel this message was created in.
 
         Returns
@@ -1244,18 +1246,45 @@ class PartialMessage(snowflakes.Unique):
         """
         await self.app.rest.delete_message(self.channel_id, self.id)
 
-    async def add_reaction(self, emoji: emojis_.Emojiish) -> None:
+    @typing.overload
+    async def add_reaction(
+        self,
+        emoji: typing.Union[str, emojis_.Emoji],
+    ) -> None:
+        ...
+
+    @typing.overload
+    async def add_reaction(
+        self,
+        emoji: str,
+        emoji_id: snowflakes.SnowflakeishOr[emojis_.CustomEmoji],
+    ) -> None:
+        ...
+
+    async def add_reaction(
+        self,
+        emoji: typing.Union[str, emojis_.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis_.CustomEmoji]] = undefined.UNDEFINED,
+    ) -> None:
         r"""Add a reaction to this message.
 
         Parameters
         ----------
-        emoji : hikari.emojis.Emojiish
-            The emoji to add. This may be a unicode emoji string, the
-            `name:id` of a custom emoji, or a subclass of
-            `hikari.emojis.Emoji`.
+        emoji: typing.Union[builtins.str, hikari.emojis.Emoji]
+            Object or name of the emoji to react with.
 
             Note that if the emoji is an `hikari.emojis.CustomEmoji`
             and is not from a guild the bot user is in, then this will fail.
+
+        Other Parameters
+        ----------------
+        emoji_id : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.emojis.CustomEmoji]]
+            ID of the custom emoji to react with.
+            This should only be provided when a custom emoji's name is passed
+            for `emoji`.
+
+            Note that this will fail if the emoji is from a guild the bot isn't
+            in.
 
         Examples
         --------
@@ -1266,12 +1295,8 @@ class PartialMessage(snowflakes.Unique):
         # Using a unicode emoji name.
         await message.add_reaction("\N{OK HAND SIGN}")
 
-        # Using the `name:id` format.
-        await message.add_reaction("rooAYAYA:705837374319493284")
-
-        # Using a raw custom emoji mention (unanimated and animated)
-        await message.add_reaction("<:rooAYAYA:705837374319493284>")
-        await message.add_reaction("<a:rooAYAYA:705837374319493284>")
+        # Using the name and id.
+        await message.add_reaction("rooAYAYA", 705837374319493284)
 
         # Using an Emoji-derived object.
         await message.add_reaction(some_emoji_object)
@@ -1293,11 +1318,31 @@ class PartialMessage(snowflakes.Unique):
             guild you are not part of if no one else has previously
             reacted with the same emoji.
         """
-        await self.app.rest.add_reaction(channel=self.channel_id, message=self.id, emoji=emoji)
+        await self.app.rest.add_reaction(channel=self.channel_id, message=self.id, emoji=emoji, emoji_id=emoji_id)
+
+    @typing.overload
+    async def remove_reaction(
+        self,
+        emoji: typing.Union[str, emojis_.Emoji],
+        *,
+        user: undefined.UndefinedOr[snowflakes.SnowflakeishOr[users_.PartialUser]] = undefined.UNDEFINED,
+    ) -> None:
+        ...
+
+    @typing.overload
+    async def remove_reaction(
+        self,
+        emoji: str,
+        emoji_id: snowflakes.SnowflakeishOr[emojis_.CustomEmoji],
+        *,
+        user: undefined.UndefinedOr[snowflakes.SnowflakeishOr[users_.PartialUser]] = undefined.UNDEFINED,
+    ) -> None:
+        ...
 
     async def remove_reaction(
         self,
-        emoji: emojis_.Emojiish,
+        emoji: typing.Union[str, emojis_.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis_.CustomEmoji]] = undefined.UNDEFINED,
         *,
         user: undefined.UndefinedOr[snowflakes.SnowflakeishOr[users_.PartialUser]] = undefined.UNDEFINED,
     ) -> None:
@@ -1305,11 +1350,15 @@ class PartialMessage(snowflakes.Unique):
 
         Parameters
         ----------
-        emoji : hikari.emojis.Emojiish
-            The emoji to remove.
+        emoji : typing.Union[builtins.str, hikari.emojis.Emoji]
+            Object or name of the emoji to remove the reaction for.
 
         Other Parameters
         ----------------
+        emoji_id : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.emojis.CustomEmoji]]
+            ID of the custom emoji to remove the reaction for.
+            This should only be provided when a custom emoji's name is passed
+            for `emoji`.
         user : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.users.PartialUser]]
             The user of the reaction to remove. If unspecified, then the bot's
             reaction is removed instead.
@@ -1324,9 +1373,8 @@ class PartialMessage(snowflakes.Unique):
             # reaction.
             await message.remove_reaction("\N{OK HAND SIGN}", some_user)
 
-            # Using a raw custom emoji mention (unanimated and animated)
-            await message.remove_reaction("<:rooAYAYA:705837374319493284>", some_user)
-            await message.remove_reaction("<a:rooAYAYA:705837374319493284>", some_user)
+            # Using the name and id.
+            await message.add_reaction("rooAYAYA", 705837374319493284)
 
             # Using an Emoji object and removing a specific user from this
             # reaction.
@@ -1349,18 +1397,49 @@ class PartialMessage(snowflakes.Unique):
             found.
         """
         if user is undefined.UNDEFINED:
-            await self.app.rest.delete_my_reaction(channel=self.channel_id, message=self.id, emoji=emoji)
+            await self.app.rest.delete_my_reaction(
+                channel=self.channel_id, message=self.id, emoji=emoji, emoji_id=emoji_id
+            )
         else:
-            await self.app.rest.delete_reaction(channel=self.channel_id, message=self.id, emoji=emoji, user=user)
+            await self.app.rest.delete_reaction(
+                channel=self.channel_id, message=self.id, emoji=emoji, emoji_id=emoji_id, user=user
+            )
 
-    async def remove_all_reactions(self, emoji: undefined.UndefinedOr[emojis_.Emojiish] = undefined.UNDEFINED) -> None:
+    @typing.overload
+    async def remove_all_reactions(self) -> None:
+        ...
+
+    @typing.overload
+    async def remove_all_reactions(
+        self,
+        emoji: typing.Union[str, emojis_.Emoji],
+    ) -> None:
+        ...
+
+    @typing.overload
+    async def remove_all_reactions(
+        self,
+        emoji: str,
+        emoji_id: snowflakes.SnowflakeishOr[emojis_.CustomEmoji],
+    ) -> None:
+        ...
+
+    async def remove_all_reactions(
+        self,
+        emoji: undefined.UndefinedOr[typing.Union[str, emojis_.Emoji]] = undefined.UNDEFINED,
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis_.CustomEmoji]] = undefined.UNDEFINED,
+    ) -> None:
         r"""Remove all users' reactions for a specific emoji from the message.
 
         Other Parameters
         ----------------
-        emoji : hikari.undefined.UndefinedOr[hikari.emojis.Emojiish]
-            The emoji to remove all reactions for. If not specified, then all
-            emojis are removed.
+        emoji : hikari.undefined.UndefinedOr[typing.Union[builtins.str, hikari.emojis.Emoji]]
+            Object or name of the emoji to get the reactions for. If not specified
+            then all reactions are removed.
+        emoji_id : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.emojis.CustomEmoji]]
+            ID of the custom emoji to react with.
+            This should only be provided when a custom emoji's name is passed
+            for `emoji`.
 
         Example
         --------
@@ -1368,9 +1447,8 @@ class PartialMessage(snowflakes.Unique):
             # reaction.
             await message.remove_all_reactions("\N{OK HAND SIGN}")
 
-            # Using a raw custom emoji mention (unanimated and animated)
-            await message.remove_all_reactions("<:rooAYAYA:705837374319493284>")
-            await message.remove_all_reactions("<a:rooAYAYA:705837374319493284>")
+            # Using the name and id.
+            await message.add_reaction("rooAYAYA", 705837374319493284)
 
             # Removing all reactions entirely.
             await message.remove_all_reactions()
@@ -1391,7 +1469,9 @@ class PartialMessage(snowflakes.Unique):
         if emoji is undefined.UNDEFINED:
             await self.app.rest.delete_all_reactions(channel=self.channel_id, message=self.id)
         else:
-            await self.app.rest.delete_all_reactions_for_emoji(channel=self.channel_id, message=self.id, emoji=emoji)
+            await self.app.rest.delete_all_reactions_for_emoji(
+                channel=self.channel_id, message=self.id, emoji=emoji, emoji_id=emoji_id
+            )
 
 
 @attr.define(hash=True, kw_only=True, weakref_slot=False, auto_attribs=False)

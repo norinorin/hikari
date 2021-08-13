@@ -31,8 +31,11 @@ class TestVoiceStateUpdateEvent:
     @pytest.fixture()
     def event(self):
         return voice_events.VoiceStateUpdateEvent(
-            app=None, shard=object(), state=mock.Mock(voices.VoiceState), old_state=mock.Mock(voices.VoiceState)
+            shard=object(), state=mock.Mock(voices.VoiceState), old_state=mock.Mock(voices.VoiceState)
         )
+
+    def test_app_property(self, event):
+        assert event.app is event.state.app
 
     def test_guild_id_property(self, event):
         event.state.guild_id = 123

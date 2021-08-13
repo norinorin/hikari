@@ -1812,6 +1812,7 @@ class TestEntityFactoryImpl:
                     "emoji_id": None,
                     "emoji_name": None,
                 },
+                {"channel_id": "92929292929", "description": "hi there", "emoji_id": "49494949", "emoji_name": None},
             ],
         }
 
@@ -1822,33 +1823,47 @@ class TestEntityFactoryImpl:
 
         assert welcome_screen.channels[0].channel_id == 87656344532234
         assert welcome_screen.channels[0].description == "Follow for nothing"
-        assert isinstance(welcome_screen.channels[0].emoji, emoji_models.UnicodeEmoji)
-        assert welcome_screen.channels[0].emoji.name == "📡"
-        assert isinstance(welcome_screen.channels[1].emoji, emoji_models.CustomEmoji)
-        assert welcome_screen.channels[1].emoji.name == "dogGoesMeow"
-        assert welcome_screen.channels[1].emoji.id == 31231351234
-        assert welcome_screen.channels[1].emoji.is_animated is None
+
+        assert isinstance(welcome_screen.channels[0].emoji_name, emoji_models.UnicodeEmoji)
+        assert welcome_screen.channels[0].emoji_name == "📡"
+        assert welcome_screen.channels[0].emoji_id is None
+
+        assert not isinstance(welcome_screen.channels[1].emoji_name, emoji_models.UnicodeEmoji)
+        assert welcome_screen.channels[1].emoji_name == "dogGoesMeow"
+        assert welcome_screen.channels[1].emoji_id == 31231351234
+
+        assert welcome_screen.channels[2].emoji_name is None
+        assert welcome_screen.channels[2].emoji_id is None
+
+        assert welcome_screen.channels[3].emoji_name is None
+        assert welcome_screen.channels[3].emoji_id == 49494949
 
     def test_serialize_welcome_channel_with_custom_emoji(self, entity_factory_impl, mock_app):
         channel = guild_models.WelcomeChannel(
             channel_id=snowflakes.Snowflake(431231),
             description="meow",
-            emoji=emoji_models.CustomEmoji(id=snowflakes.Snowflake(564123), name="boom", is_animated=None),
+            emoji_id=snowflakes.Snowflake(564123),
+            emoji_name="boom",
         )
         result = entity_factory_impl.serialize_welcome_channel(channel)
 
-        assert result == {"channel_id": "431231", "description": "meow", "emoji_id": "564123", "emoji_name": "boom"}
+        assert result == {"channel_id": "431231", "description": "meow", "emoji_id": "564123"}
 
     def test_serialize_welcome_channel_with_unicode_emoji(self, entity_factory_impl, mock_app):
         channel = guild_models.WelcomeChannel(
-            channel_id=snowflakes.Snowflake(4312311), description="meow1", emoji=emoji_models.UnicodeEmoji("a")
+            channel_id=snowflakes.Snowflake(4312311),
+            description="meow1",
+            emoji_name=emoji_models.UnicodeEmoji("a"),
+            emoji_id=None,
         )
         result = entity_factory_impl.serialize_welcome_channel(channel)
 
         assert result == {"channel_id": "4312311", "description": "meow1", "emoji_name": "a"}
 
     def test_serialize_welcome_channel_with_no_emoji(self, entity_factory_impl, mock_app):
-        channel = guild_models.WelcomeChannel(channel_id=snowflakes.Snowflake(4312312), description="meow2", emoji=None)
+        channel = guild_models.WelcomeChannel(
+            channel_id=snowflakes.Snowflake(4312312), description="meow2", emoji_id=None, emoji_name=None
+        )
         result = entity_factory_impl.serialize_welcome_channel(channel)
 
         assert result == {"channel_id": "4312312", "description": "meow2"}
@@ -3612,7 +3627,7 @@ class TestEntityFactoryImpl:
         assert partial_message.app is mock_app
         assert partial_message.id == 123
         assert partial_message.channel_id == 456
-        assert partial_message._guild_id == 678
+        assert partial_message.guild_id == 678
         assert partial_message.author == entity_factory_impl.deserialize_user(user_payload)
         assert partial_message.member == entity_factory_impl.deserialize_member(
             member_payload, user=partial_message.author, guild_id=snowflakes.Snowflake(678)
@@ -3719,7 +3734,7 @@ class TestEntityFactoryImpl:
 
         assert partial_message.content is None
         assert partial_message.edited_timestamp is None
-        assert partial_message._guild_id is not None
+        assert partial_message.guild_id is not None
         assert partial_message.member is None
         assert partial_message.application.primary_sku_id is None
         assert partial_message.application.icon_hash is None
@@ -3734,7 +3749,7 @@ class TestEntityFactoryImpl:
         assert partial_message.app is mock_app
         assert partial_message.id == 123
         assert partial_message.channel_id == 456
-        assert partial_message._guild_id is None
+        assert partial_message.guild_id is None
         assert partial_message.author is None
         assert partial_message.member is None
         assert partial_message.content is undefined.UNDEFINED
@@ -3780,7 +3795,7 @@ class TestEntityFactoryImpl:
         assert message.app is mock_app
         assert message.id == 123
         assert message.channel_id == 456
-        assert message._guild_id == 678
+        assert message.guild_id == 678
         assert message.author == entity_factory_impl.deserialize_user(user_payload)
         assert message.member == entity_factory_impl.deserialize_member(
             member_payload, user=message.author, guild_id=snowflakes.Snowflake(678)
@@ -3897,7 +3912,7 @@ class TestEntityFactoryImpl:
         message = entity_factory_impl.deserialize_message(message_payload)
         assert message.app is mock_app
         assert message.content is None
-        assert message._guild_id is None
+        assert message.guild_id is None
         assert message.member is None
         assert message.edited_timestamp is None
         assert message.mentions.everyone is True

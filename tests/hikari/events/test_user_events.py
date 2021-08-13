@@ -23,30 +23,13 @@
 import mock
 import pytest
 
-from hikari import guilds
-from hikari.events import reaction_events
+from hikari.events import user_events
 
 
-class TestGuildReactionAddEvent:
+class TestOwnUserUpdateEvent:
     @pytest.fixture()
     def event(self):
-        return reaction_events.GuildReactionAddEvent(
-            shard=object(),
-            member=mock.MagicMock(guilds.Member),
-            channel_id=123,
-            message_id=456,
-            emoji_name="👌",
-            emoji_id=None,
-            is_animated=False,
-        )
+        return user_events.OwnUserUpdateEvent(shard=None, old_user=None, user=mock.Mock())
 
     def test_app_property(self, event):
-        assert event.app is event.member.app
-
-    def test_guild_id_property(self, event):
-        event.member.guild_id = 123
-        assert event.guild_id == 123
-
-    def test_user_id_property(self, event):
-        event.member.user.id = 123
-        assert event.user_id == 123
+        assert event.app is event.user.app

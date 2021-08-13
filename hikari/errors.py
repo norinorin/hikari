@@ -57,13 +57,13 @@ import typing
 import attr
 
 from hikari.internal import attr_extensions
+from hikari.internal import data_binding
 from hikari.internal import enums
 
 if typing.TYPE_CHECKING:
     from hikari import intents as intents_
     from hikari import messages
     from hikari import snowflakes
-    from hikari.internal import data_binding
     from hikari.internal import routes
 
 
@@ -169,9 +169,7 @@ class ShardCloseCode(int, enums.Enum):
     @property
     def is_standard(self) -> bool:
         """Return `builtins.True` if this is a standard code."""
-        # Appears to be some MyPy bug where == is expected to
-        # return anything.
-        return bool((self.value // 1000) == 1)
+        return (self.value // 1000) == 1
 
 
 @attr.define(auto_exc=True, repr=False, weakref_slot=False)
@@ -461,6 +459,27 @@ class BadRequestError(ClientHTTPResponseError):
 
     status: http.HTTPStatus = attr.field(default=http.HTTPStatus.BAD_REQUEST, init=False)
     """The HTTP status code for the response."""
+
+    errors: typing.Optional[typing.Dict[str, data_binding.JSONObject]] = attr.field(default=None, kw_only=True)
+    """Dict of top level field names to field specific error paths.
+
+    For more information, this error format is loosely defined at
+    https://discord.com/developers/docs/reference#error-messages and is commonly
+    returned for 50035 errors.
+    """
+
+    _cached_str: str = attr.field(default=None, init=False)
+
+    def __str__(self) -> str:
+        if self._cached_str:
+            return self._cached_str
+
+        value = super().__str__()
+        if self.errors:
+            value += "\n" + data_binding.dump_json(self.errors, indent=2)
+
+        self._cached_str = value
+        return value
 
 
 @attr.define(auto_exc=True, repr=False, weakref_slot=False)

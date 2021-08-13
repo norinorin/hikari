@@ -53,9 +53,19 @@ class CacheView(typing.Mapping[_KeyT, _ValueT], abc.ABC):
 
     __slots__: typing.Sequence[str] = ()
 
+    @typing.overload
     @abc.abstractmethod
-    def get_item_at(self, index: int) -> _ValueT:
-        """Get an entry in the view at position `index`."""
+    def get_item_at(self, index: int, /) -> _ValueT:
+        ...
+
+    @typing.overload
+    @abc.abstractmethod
+    def get_item_at(self, index: slice, /) -> typing.Sequence[_ValueT]:
+        ...
+
+    @abc.abstractmethod
+    def get_item_at(self, index: typing.Union[slice, int], /) -> typing.Union[_ValueT, typing.Sequence[_ValueT]]:
+        ...
 
     @abc.abstractmethod
     def iterator(self) -> iterators.LazyIterator[_ValueT]:
@@ -299,12 +309,12 @@ class Cache(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_invite(self, code: invites.Inviteish, /) -> typing.Optional[invites.InviteWithMetadata]:
+    def get_invite(self, code: typing.Union[invites.InviteCode, str], /) -> typing.Optional[invites.InviteWithMetadata]:
         """Get an invite object from the cache.
 
         Parameters
         ----------
-        code : hikari.invites.Inviteish
+        code : typing.Union[hikari.invites.InviteCode, builtins.str]
             The object or string code of the invite to get from the cache.
 
         Returns
@@ -1001,12 +1011,14 @@ class MutableCache(Cache, abc.ABC):
         """
 
     @abc.abstractmethod
-    def delete_invite(self, code: invites.Inviteish, /) -> typing.Optional[invites.InviteWithMetadata]:
+    def delete_invite(
+        self, code: typing.Union[invites.InviteCode, str], /
+    ) -> typing.Optional[invites.InviteWithMetadata]:
         """Remove an invite object from the cache.
 
         Parameters
         ----------
-        code : hikari.invites.Inviteish
+        code : typing.Union[hikari.invites.InviteCode, builtins.str]
             Object or string code of the invite to remove from the cache.
 
         Returns

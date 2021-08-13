@@ -31,7 +31,8 @@ __all__: typing.List[str] = [
     "PermissionOverwrite",
     "PermissionOverwriteType",
     "PartialChannel",
-    "TextChannel",
+    "TextableChannel",
+    "TextableGuildChannel",
     "PrivateChannel",
     "DMChannel",
     "GroupDMChannel",
@@ -42,9 +43,10 @@ __all__: typing.List[str] = [
     "GuildStoreChannel",
     "GuildVoiceChannel",
     "GuildStageChannel",
+    "WebhookChannelT",
+    "WebhookChannelTypes",
 ]
 
-import abc
 import typing
 
 import attr
@@ -222,8 +224,7 @@ class ChannelFollow:
         assert isinstance(webhook, webhooks.ChannelFollowerWebhook)
         return webhook
 
-    @property
-    def channel(self) -> typing.Union[GuildNewsChannel, GuildTextChannel, None]:
+    def get_channel(self) -> typing.Union[GuildNewsChannel, GuildTextChannel, None]:
         """Get the channel being followed from the cache.
 
         !!! warning
@@ -380,8 +381,8 @@ class PartialChannel(snowflakes.Unique):
         return await self.app.rest.delete_channel(self.id)
 
 
-class TextChannel(PartialChannel, abc.ABC):
-    """A channel that can have text messages in it."""
+class TextableChannel(PartialChannel):
+    """Mixin class for a channel which can have text messages in it."""
 
     # This is a mixin, do not add slotted fields.
     __slots__: typing.Sequence[str] = ()
@@ -834,7 +835,7 @@ class PrivateChannel(PartialChannel):
 
 
 @attr.define(hash=True, kw_only=True, weakref_slot=False)
-class DMChannel(PrivateChannel, TextChannel):
+class DMChannel(PrivateChannel, TextableChannel):
     """Represents a direct message text channel that is between you and another user."""
 
     recipient: users.User = attr.field(eq=False, hash=False, repr=False)
@@ -854,7 +855,7 @@ class GroupDMChannel(PrivateChannel):
     """Represents a group direct message channel.
 
     !!! note
-        This doesn't have the methods found on `TextChannel` as bots cannot
+        This doesn't have the methods found on `TextableChannel` as bots cannot
         interact with a group DM that they own by sending or seeing messages in
         it.
     """
@@ -1141,7 +1142,7 @@ class GuildChannel(PartialChannel):
         video_quality_mode: undefined.UndefinedOr[typing.Union[VideoQualityMode, int]] = undefined.UNDEFINED,
         user_limit: undefined.UndefinedOr[int] = undefined.UNDEFINED,
         rate_limit_per_user: undefined.UndefinedOr[time.Intervalish] = undefined.UNDEFINED,
-        region: undefined.UndefinedOr[voices.VoiceRegionish] = undefined.UNDEFINED,
+        region: undefined.UndefinedOr[typing.Union[voices.VoiceRegion, str]] = undefined.UNDEFINED,
         permission_overwrites: undefined.UndefinedOr[typing.Sequence[PermissionOverwrite]] = undefined.UNDEFINED,
         parent_category: undefined.UndefinedOr[snowflakes.SnowflakeishOr[GuildCategory]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
@@ -1166,7 +1167,7 @@ class GuildChannel(PartialChannel):
             If provided, the new user limit in the channel.
         rate_limit_per_user : hikari.undefined.UndefinedOr[hikari.internal.time.Intervalish]
             If provided, the new rate limit per user in the channel.
-        region : hikari.undefined.UndefinedOr[hikari.voices.VoiceRegionish]
+        region : hikari.undefined.UndefinedOr[typing.Union[hikari.voices.VoiceRegion, builtins.str]]
             If provided, the voice region to set for this channel. Passing
             `builtins.None` here will set it to "auto" mode where the used
             region will be decided based on the first person who connects to it
@@ -1225,6 +1226,13 @@ class GuildChannel(PartialChannel):
         )
 
 
+class TextableGuildChannel(GuildChannel, TextableChannel):
+    """Mixin class for any guild channel which can have text messages in it."""
+
+    # This is a mixin, do not add slotted fields.
+    __slots__: typing.Sequence[str] = ()
+
+
 @attr.define(hash=True, kw_only=True, weakref_slot=False)
 class GuildCategory(GuildChannel):
     """Represents a guild category channel.
@@ -1235,7 +1243,7 @@ class GuildCategory(GuildChannel):
 
 
 @attr.define(hash=True, kw_only=True, weakref_slot=False)
-class GuildTextChannel(GuildChannel, TextChannel):
+class GuildTextChannel(TextableGuildChannel):
     """Represents a guild text channel."""
 
     topic: typing.Optional[str] = attr.field(eq=False, hash=False, repr=False)
@@ -1270,7 +1278,7 @@ class GuildTextChannel(GuildChannel, TextChannel):
 
 
 @attr.define(hash=True, kw_only=True, weakref_slot=False)
-class GuildNewsChannel(GuildChannel, TextChannel):
+class GuildNewsChannel(TextableGuildChannel):
     """Represents an news channel."""
 
     topic: typing.Optional[str] = attr.field(eq=False, hash=False, repr=False)
@@ -1348,3 +1356,22 @@ class GuildStageChannel(GuildChannel):
 
     If this is `0`, then assume no limit.
     """
+
+
+WebhookChannelT = typing.Union[GuildTextChannel, GuildNewsChannel]
+"""Union of the channel types which incoming and follower webhooks can be attached to.
+
+The following types are in this:
+
+* `GuildTextChannel`
+* `GuildNewsChannel`
+"""
+
+WebhookChannelTypes = (GuildTextChannel, GuildNewsChannel)
+"""Tuple of the channel types which are valid for `WebhookChannelT`.
+
+This includes:
+
+* `GuildTextChannel`
+* `GuildNewsChannel`
+"""

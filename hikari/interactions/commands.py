@@ -51,7 +51,7 @@ from hikari.internal import enums
 if typing.TYPE_CHECKING:
     from hikari import guilds
     from hikari import permissions as permissions_
-    from hikari import users
+    from hikari import users as users_
     from hikari.api import special_endpoints
 
 
@@ -95,7 +95,10 @@ class OptionType(int, enums.Enum):
     """Denotes a command option where the value will be a string."""
 
     INTEGER = 4
-    """Denotes a command option where the value will be a int."""
+    """Denotes a command option where the value will be a int.
+
+    This is range limited between -2^53 and 2^53.
+    """
 
     BOOLEAN = 5
     """Denotes a command option where the value will be a bool."""
@@ -112,6 +115,12 @@ class OptionType(int, enums.Enum):
     MENTIONABLE = 9
     """Denotes a command option where the value will be a snowflake ID."""
 
+    FLOAT = 10
+    """Denotes a command option where the value will be a float.
+
+    This is range limited between -2^53 and 2^53.
+    """
+
 
 @attr_extensions.with_copy
 @attr.define(hash=False, kw_only=True, weakref_slot=False)
@@ -121,7 +130,7 @@ class CommandChoice:
     name: str = attr.field(repr=True)
     """The choice's name (inclusively between 1-100 characters)."""
 
-    value: typing.Union[str, int] = attr.field(repr=True)
+    value: typing.Union[str, int, float] = attr.field(repr=True)
     """Value of the choice (up to 100 characters if a string)."""
 
 
@@ -340,7 +349,7 @@ class InteractionChannel(channels.PartialChannel):
 class ResolvedOptionData:
     """Represents the resolved objects of entities referenced in a command's options."""
 
-    users: typing.Mapping[snowflakes.Snowflake, users.User] = attr.field(repr=False)
+    users: typing.Mapping[snowflakes.Snowflake, users_.User] = attr.field(repr=False)
     """Mapping of snowflake IDs to the resolved option user objects."""
 
     members: typing.Mapping[snowflakes.Snowflake, bases.InteractionMember] = attr.field(repr=False)
@@ -364,7 +373,7 @@ class CommandInteractionOption:
     type: typing.Union[OptionType, int] = attr.field(repr=True)
     """Type of this option."""
 
-    value: typing.Optional[typing.Sequence[typing.Union[str, int, bool]]] = attr.field(repr=True)
+    value: typing.Union[str, int, bool, float, None] = attr.field(repr=True)
     """Value provided for this option.
 
     Either `CommandInteractionOption.value` or `CommandInteractionOption.options`
@@ -407,7 +416,7 @@ class CommandInteraction(bases.MessageResponseMixin[CommandResponseTypesT]):
         contains the member's permissions in the current channel.
     """
 
-    user: users.User = attr.field(eq=False, hash=False, repr=True)
+    user: users_.User = attr.field(eq=False, hash=False, repr=True)
     """The user who triggered this command interaction."""
 
     command_id: snowflakes.Snowflake = attr.field(eq=False, hash=False, repr=True)
@@ -489,6 +498,109 @@ class CommandInteraction(bases.MessageResponseMixin[CommandResponseTypesT]):
         hikari.errors.RateLimitTooLongError
             Raised in the event that a rate limit occurs that is
             longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+        return await self.app.rest.fetch_interaction_response(self.application_id, self.token)
+
+    async def create_initial_response(
+        self,
+        response_type: CommandResponseTypesT,
+        content: undefined.UndefinedOr[typing.Any] = undefined.UNDEFINED,
+        *,
+        flags: typing.Union[int, messages.MessageFlag, undefined.UndefinedType] = undefined.UNDEFINED,
+        tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+        embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
+        mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+        user_mentions: undefined.UndefinedOr[
+            typing.Union[snowflakes.SnowflakeishSequence[users_.PartialUser], bool]
+        ] = undefined.UNDEFINED,
+        role_mentions: undefined.UndefinedOr[
+            typing.Union[snowflakes.SnowflakeishSequence[guilds.PartialRole], bool]
+        ] = undefined.UNDEFINED,
+    ) -> None:
+        """Create the initial response for this interaction.
+
+        !!! warning
+            Calling this on an interaction which already has an initial
+            response will result in this raising a `hikari.errors.NotFoundError`.
+            This includes if the REST interaction server has already responded
+            to the request.
+
+        Parameters
+        ----------
+        response_type : typing.Union[builtins.int, CommandResponseTypesT]
+            The type of interaction response this is.
+
+        Other Parameters
+        ----------------
+        content : hikari.undefined.UndefinedOr[typing.Any]
+            If provided, the message contents. If
+            `hikari.undefined.UNDEFINED`, then nothing will be sent
+            in the content. Any other value here will be cast to a
+            `builtins.str`.
+
+            If this is a `hikari.embeds.Embed` and no `embed` nor `embeds` kwarg
+            is provided, then this will instead update the embed. This allows
+            for simpler syntax when sending an embed alone.
+        embed : hikari.undefined.UndefinedOr[hikari.embeds.Embed]
+            If provided, the message embed.
+        embeds : hikari.undefined.UndefinedOr[typing.Sequence[hikari.embeds.Embed]]
+            If provided, the message embeds.
+        flags : typing.Union[builtins.int, hikari.messages.MessageFlag, hikari.undefined.UndefinedType]
+            If provided, the message flags this response should have.
+
+            As of writing the only message flag which can be set here is
+            `hikari.messages.MessageFlag.EPHEMERAL`.
+        tts : hikari.undefined.UndefinedOr[builtins.bool]
+            If provided, whether the message will be read out by a screen
+            reader using Discord's TTS (text-to-speech) system.
+        mentions_everyone : hikari.undefined.UndefinedOr[builtins.bool]
+            If provided, whether the message should parse @everyone/@here
+            mentions.
+        user_mentions : hikari.undefined.UndefinedOr[typing.Union[hikari.snowflakes.SnowflakeishSequence[hikari.users.PartialUser], builtins.bool]]
+            If provided, and `builtins.True`, all user mentions will be detected.
+            If provided, and `builtins.False`, all user mentions will be ignored
+            if appearing in the message body.
+            Alternatively this may be a collection of
+            `hikari.snowflakes.Snowflake`, or
+            `hikari.users.PartialUser` derivatives to enforce mentioning
+            specific users.
+        role_mentions : hikari.undefined.UndefinedOr[typing.Union[hikari.snowflakes.SnowflakeishSequence[hikari.guilds.PartialRole], builtins.bool]]
+            If provided, and `builtins.True`, all role mentions will be detected.
+            If provided, and `builtins.False`, all role mentions will be ignored
+            if appearing in the message body.
+            Alternatively this may be a collection of
+            `hikari.snowflakes.Snowflake`, or
+            `hikari.guilds.PartialRole` derivatives to enforce mentioning
+            specific roles.
+
+        Raises
+        ------
+        builtins.ValueError
+            If more than 100 unique objects/entities are passed for
+            `role_mentions` or `user_mentions`.
+        builtins.TypeError
+            If both `embed` and `embeds` are specified.
+        hikari.errors.BadRequestError
+            This may be raised in several discrete situations, such as messages
+            being empty with no embeds; messages with more than
+            2000 characters in them, embeds that exceed one of the many embed
+            limits; invalid image URLs in embeds.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the interaction is not found or if the interaction's initial
+            response has already been created.
         hikari.errors.RateLimitTooLongError
             Raised in the event that a rate limit occurs that is
             longer than `max_rate_limit` when making a request.
@@ -502,10 +614,39 @@ class CommandInteraction(bases.MessageResponseMixin[CommandResponseTypesT]):
             nature, and will trigger this exception if they occur.
         hikari.errors.InternalServerError
             If an internal error occurs on Discord while handling the request.
-        """
-        channel = await self.app.rest.fetch_channel(self.channel_id)
-        assert isinstance(channel, channels.TextChannel)
-        return channel
+        """  # noqa: E501 - Line too long
+        await self.app.rest.create_interaction_response(
+            self.id,
+            self.token,
+            response_type,
+            content,
+            tts=tts,
+            embed=embed,
+            embeds=embeds,
+            flags=flags,
+            mentions_everyone=mentions_everyone,
+            user_mentions=user_mentions,
+            role_mentions=role_mentions,
+        )
+
+    async def edit_initial_response(
+        self,
+        content: undefined.UndefinedNoneOr[typing.Any] = undefined.UNDEFINED,
+        *,
+        embed: undefined.UndefinedNoneOr[embeds_.Embed] = undefined.UNDEFINED,
+        embeds: undefined.UndefinedNoneOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
+        attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
+        attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
+        replace_attachments: bool = False,
+        mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+        user_mentions: undefined.UndefinedOr[
+            typing.Union[snowflakes.SnowflakeishSequence[users_.PartialUser], bool]
+        ] = undefined.UNDEFINED,
+        role_mentions: undefined.UndefinedOr[
+            typing.Union[snowflakes.SnowflakeishSequence[guilds.PartialRole], bool]
+        ] = undefined.UNDEFINED,
+    ) -> messages.Message:
+        """Edit the initial response of this command interaction.
 
     def get_channel(self) -> typing.Union[channels.GuildTextChannel, channels.GuildNewsChannel, None]:
         """Get the guild channel this was triggered in from the cache.

@@ -437,7 +437,7 @@ class GuildBuilder(abc.ABC):
         permission_overwrites: undefined.UndefinedOr[
             typing.Collection[channels.PermissionOverwrite]
         ] = undefined.UNDEFINED,
-        region: undefined.UndefinedNoneOr[voices.VoiceRegionish],
+        region: undefined.UndefinedNoneOr[typing.Union[voices.VoiceRegion, str]],
         user_limit: undefined.UndefinedOr[int] = undefined.UNDEFINED,
     ) -> snowflakes.Snowflake:
         """Create a voice channel.
@@ -463,7 +463,7 @@ class GuildBuilder(abc.ABC):
             If provided, the new video quality mode for the channel.
         permission_overwrites : hikari.undefined.UndefinedOr[typing.Sequence[hikari.channels.PermissionOverwrite]]
             If provided, the permission overwrites for the channel.
-        region : hikari.undefined.UndefinedOr[hikari.voices.VoiceRegionish]
+        region : hikari.undefined.UndefinedOr[typing.Union[hikari.voices.VoiceRegion, builtins.str]]
              If provided, the voice region to for this channel. Passing
              `builtins.None` here will set it to "auto" mode where the used
              region will be decided based on the first person who connects to it
@@ -494,7 +494,7 @@ class GuildBuilder(abc.ABC):
         permission_overwrites: undefined.UndefinedOr[
             typing.Collection[channels.PermissionOverwrite]
         ] = undefined.UNDEFINED,
-        region: undefined.UndefinedNoneOr[voices.VoiceRegionish],
+        region: undefined.UndefinedNoneOr[typing.Union[voices.VoiceRegion, str]],
         user_limit: undefined.UndefinedOr[int] = undefined.UNDEFINED,
     ) -> snowflakes.Snowflake:
         """Create a stage channel.
@@ -518,7 +518,7 @@ class GuildBuilder(abc.ABC):
             servers.
         permission_overwrites : hikari.undefined.UndefinedOr[typing.Sequence[hikari.channels.PermissionOverwrite]]
             If provided, the permission overwrites for the channel.
-        region : hikari.undefined.UndefinedOr[hikari.voices.VoiceRegionish]
+        region : hikari.undefined.UndefinedOr[typing.Union[hikari.voices.VoiceRegion, builtins.str]]
              If provided, the voice region to for this channel. Passing
              `builtins.None` here will set it to "auto" mode where the used
              region will be decided based on the first person who connects to it

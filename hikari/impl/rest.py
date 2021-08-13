@@ -45,7 +45,6 @@ import logging
 import math
 import os
 import platform
-import re
 import sys
 import typing
 
@@ -114,10 +113,6 @@ _X_RATELIMIT_BUCKET_HEADER: typing.Final[str] = sys.intern("X-RateLimit-Bucket")
 _X_RATELIMIT_LIMIT_HEADER: typing.Final[str] = sys.intern("X-RateLimit-Limit")
 _X_RATELIMIT_REMAINING_HEADER: typing.Final[str] = sys.intern("X-RateLimit-Remaining")
 _X_RATELIMIT_RESET_AFTER_HEADER: typing.Final[str] = sys.intern("X-RateLimit-Reset-After")
-
-# Custom emoji mentions are in the format of <:name:id> for static emoji, or
-# <a:name:id> for animated emoji.
-_CUSTOM_EMOJI_PATTERN: typing.Final[typing.Pattern[str]] = re.compile(r"<a?:([^:]+:\d+)>")
 
 
 class ClientCredentialsStrategy(rest_api.TokenStrategy):
@@ -911,7 +906,7 @@ class RESTClientImpl(rest_api.RESTClient):
         video_quality_mode: undefined.UndefinedOr[typing.Union[channels_.VideoQualityMode, int]] = undefined.UNDEFINED,
         user_limit: undefined.UndefinedOr[int] = undefined.UNDEFINED,
         rate_limit_per_user: undefined.UndefinedOr[time.Intervalish] = undefined.UNDEFINED,
-        region: undefined.UndefinedNoneOr[voices.VoiceRegionish] = undefined.UNDEFINED,
+        region: undefined.UndefinedNoneOr[typing.Union[voices.VoiceRegion, str]] = undefined.UNDEFINED,
         permission_overwrites: undefined.UndefinedOr[
             typing.Sequence[channels_.PermissionOverwrite]
         ] = undefined.UNDEFINED,
@@ -969,7 +964,7 @@ class RESTClientImpl(rest_api.RESTClient):
     async def edit_my_voice_state(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        channel: snowflakes.SnowflakeishOr[channels_.PartialChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.GuildStageChannel],
         *,
         suppress: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         request_to_speak: typing.Union[undefined.UndefinedType, bool, datetime.datetime] = undefined.UNDEFINED,
@@ -993,7 +988,7 @@ class RESTClientImpl(rest_api.RESTClient):
     async def edit_voice_state(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        channel: snowflakes.SnowflakeishOr[channels_.PartialChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.GuildStageChannel],
         user: snowflakes.SnowflakeishOr[users.PartialUser],
         *,
         suppress: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -1082,14 +1077,14 @@ class RESTClientImpl(rest_api.RESTClient):
         return self._entity_factory.deserialize_invite_with_metadata(response)
 
     def trigger_typing(
-        self, channel: snowflakes.SnowflakeishOr[channels_.TextChannel]
+        self, channel: snowflakes.SnowflakeishOr[channels_.TextableChannel]
     ) -> special_endpoints.TypingIndicator:
         return special_endpoints_impl.TypingIndicator(
             request_call=self._request, channel=channel, rest_closed_event=self._get_live_attributes().closed_event
         )
 
     async def fetch_pins(
-        self, channel: snowflakes.SnowflakeishOr[channels_.TextChannel]
+        self, channel: snowflakes.SnowflakeishOr[channels_.TextableChannel]
     ) -> typing.Sequence[messages_.Message]:
         route = routes.GET_CHANNEL_PINS.compile(channel=channel)
         response = await self._request(route)
@@ -1098,7 +1093,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def pin_message(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
     ) -> None:
         route = routes.PUT_CHANNEL_PINS.compile(channel=channel, message=message)
@@ -1106,7 +1101,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def unpin_message(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
     ) -> None:
         route = routes.DELETE_CHANNEL_PIN.compile(channel=channel, message=message)
@@ -1114,7 +1109,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     def fetch_messages(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         *,
         before: undefined.UndefinedOr[snowflakes.SearchableSnowflakeishOr[snowflakes.Unique]] = undefined.UNDEFINED,
         after: undefined.UndefinedOr[snowflakes.SearchableSnowflakeishOr[snowflakes.Unique]] = undefined.UNDEFINED,
@@ -1157,7 +1152,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def fetch_message(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
     ) -> messages_.Message:
         route = routes.GET_CHANNEL_MESSAGE.compile(channel=channel, message=message)
@@ -1284,7 +1279,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def create_message(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         content: undefined.UndefinedOr[typing.Any] = undefined.UNDEFINED,
         *,
         attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
@@ -1475,7 +1470,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def edit_message(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
         content: undefined.UndefinedOr[typing.Any] = undefined.UNDEFINED,
         *,
@@ -1520,7 +1515,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def delete_message(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
     ) -> None:
         route = routes.DELETE_CHANNEL_MESSAGE.compile(channel=channel, message=message)
@@ -1528,7 +1523,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def delete_messages(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         messages: typing.Union[
             snowflakes.SnowflakeishOr[messages_.PartialMessage],
             snowflakes.SnowflakeishIterable[messages_.PartialMessage],
@@ -1580,29 +1575,31 @@ class RESTClientImpl(rest_api.RESTClient):
                 raise errors.BulkDeleteError(deleted, pending) from ex
 
     @staticmethod
-    def _transform_emoji_to_url_format(emoji: emojis.Emojiish) -> str:
-        # Given an emojiish, check if it is a valid custom emoji mention. If it
-        # is, then convert it to the name:id format (remove the wrapping
-        # characters), then return it. If the emoji is an emojis.CustomEmoji
-        # directly, then get the url_name of it. All other emojis and objects
-        # can just be cast to string, as they are probably unicode emoji objects
-        # or unicode emoji strings.
-        if isinstance(emoji, emojis.CustomEmoji):
+    def _transform_emoji_to_url_format(
+        emoji: typing.Union[str, emojis.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis.CustomEmoji]],
+        /,
+    ) -> str:
+        if isinstance(emoji, emojis.Emoji):
+            if emoji_id is not undefined.UNDEFINED:
+                raise ValueError("emoji_id shouldn't be passed when an Emoji object is passed for emoji")
+
             return emoji.url_name
 
-        if isinstance(emoji, str) and (custom_mention_match := _CUSTOM_EMOJI_PATTERN.match(emoji)) is not None:
-            return custom_mention_match.group(1)
+        if emoji_id is not undefined.UNDEFINED:
+            return f"{emoji}:{snowflakes.Snowflake(emoji_id)}"
 
-        return str(emoji)
+        return emoji
 
     async def add_reaction(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        emoji: emojis.Emojiish,
+        emoji: typing.Union[str, emojis.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis.CustomEmoji]] = undefined.UNDEFINED,
     ) -> None:
         route = routes.PUT_MY_REACTION.compile(
-            emoji=self._transform_emoji_to_url_format(emoji),
+            emoji=self._transform_emoji_to_url_format(emoji, emoji_id),
             channel=channel,
             message=message,
         )
@@ -1610,12 +1607,13 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def delete_my_reaction(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        emoji: emojis.Emojiish,
+        emoji: typing.Union[str, emojis.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis.CustomEmoji]] = undefined.UNDEFINED,
     ) -> None:
         route = routes.DELETE_MY_REACTION.compile(
-            emoji=self._transform_emoji_to_url_format(emoji),
+            emoji=self._transform_emoji_to_url_format(emoji, emoji_id),
             channel=channel,
             message=message,
         )
@@ -1623,12 +1621,13 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def delete_all_reactions_for_emoji(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        emoji: emojis.Emojiish,
+        emoji: typing.Union[str, emojis.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis.CustomEmoji]] = undefined.UNDEFINED,
     ) -> None:
         route = routes.DELETE_REACTION_EMOJI.compile(
-            emoji=self._transform_emoji_to_url_format(emoji),
+            emoji=self._transform_emoji_to_url_format(emoji, emoji_id),
             channel=channel,
             message=message,
         )
@@ -1636,13 +1635,14 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def delete_reaction(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        emoji: emojis.Emojiish,
         user: snowflakes.SnowflakeishOr[users.PartialUser],
+        emoji: typing.Union[str, emojis.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis.CustomEmoji]] = undefined.UNDEFINED,
     ) -> None:
         route = routes.DELETE_REACTION_USER.compile(
-            emoji=self._transform_emoji_to_url_format(emoji),
+            emoji=self._transform_emoji_to_url_format(emoji, emoji_id),
             channel=channel,
             message=message,
             user=user,
@@ -1651,7 +1651,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def delete_all_reactions(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
     ) -> None:
         route = routes.DELETE_ALL_REACTIONS.compile(channel=channel, message=message)
@@ -1659,21 +1659,22 @@ class RESTClientImpl(rest_api.RESTClient):
 
     def fetch_reactions_for_emoji(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.TextableChannel],
         message: snowflakes.SnowflakeishOr[messages_.PartialMessage],
-        emoji: emojis.Emojiish,
+        emoji: typing.Union[str, emojis.Emoji],
+        emoji_id: undefined.UndefinedOr[snowflakes.SnowflakeishOr[emojis.CustomEmoji]] = undefined.UNDEFINED,
     ) -> iterators.LazyIterator[users.User]:
         return special_endpoints_impl.ReactorIterator(
             entity_factory=self._entity_factory,
             request_call=self._request,
             channel=channel,
             message=message,
-            emoji=self._transform_emoji_to_url_format(emoji),
+            emoji=self._transform_emoji_to_url_format(emoji, emoji_id),
         )
 
     async def create_webhook(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.WebhookChannelT],
         name: str,
         *,
         avatar: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
@@ -1711,7 +1712,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def fetch_channel_webhooks(
         self,
-        channel: snowflakes.SnowflakeishOr[channels_.TextChannel],
+        channel: snowflakes.SnowflakeishOr[channels_.WebhookChannelT],
     ) -> typing.Sequence[webhooks.PartialWebhook]:
         route = routes.GET_CHANNEL_WEBHOOKS.compile(channel=channel)
         response = await self._request(route)
@@ -1734,7 +1735,7 @@ class RESTClientImpl(rest_api.RESTClient):
         token: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         name: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         avatar: undefined.UndefinedNoneOr[files.Resourceish] = undefined.UNDEFINED,
-        channel: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels_.TextChannel]] = undefined.UNDEFINED,
+        channel: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels_.WebhookChannelT]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> webhooks.PartialWebhook:
         if token is undefined.UNDEFINED:
@@ -1904,7 +1905,7 @@ class RESTClientImpl(rest_api.RESTClient):
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_gateway_bot_info(response)
 
-    async def fetch_invite(self, invite: invites.Inviteish) -> invites.Invite:
+    async def fetch_invite(self, invite: typing.Union[invites.InviteCode, str]) -> invites.Invite:
         route = routes.GET_INVITE.compile(invite_code=invite if isinstance(invite, str) else invite.code)
         query = data_binding.StringMapBuilder()
         query.put("with_counts", True)
@@ -1913,7 +1914,7 @@ class RESTClientImpl(rest_api.RESTClient):
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_invite(response)
 
-    async def delete_invite(self, invite: invites.Inviteish) -> invites.Invite:
+    async def delete_invite(self, invite: typing.Union[invites.InviteCode, str]) -> invites.Invite:
         route = routes.DELETE_INVITE.compile(invite_code=invite if isinstance(invite, str) else invite.code)
         response = await self._request(route)
         assert isinstance(response, dict)
@@ -2257,8 +2258,8 @@ class RESTClientImpl(rest_api.RESTClient):
         route = routes.PATCH_GUILD.compile(guild=guild)
         body = data_binding.JSONObjectBuilder()
         body.put("name", name)
-        body.put("verification", verification_level)
-        body.put("notifications", default_message_notifications)
+        body.put("verification_level", verification_level)
+        body.put("default_message_notifications", default_message_notifications)
         body.put("explicit_content_filter", explicit_content_filter_level)
         body.put("afk_timeout", afk_timeout, conversion=time.timespan_to_int)
         body.put("preferred_locale", preferred_locale, conversion=str)
@@ -2389,7 +2390,7 @@ class RESTClientImpl(rest_api.RESTClient):
         permission_overwrites: undefined.UndefinedOr[
             typing.Sequence[channels_.PermissionOverwrite]
         ] = undefined.UNDEFINED,
-        region: undefined.UndefinedOr[voices.VoiceRegionish] = undefined.UNDEFINED,
+        region: undefined.UndefinedOr[typing.Union[voices.VoiceRegion, str]] = undefined.UNDEFINED,
         category: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels_.GuildCategory]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> channels_.GuildVoiceChannel:
@@ -2420,7 +2421,7 @@ class RESTClientImpl(rest_api.RESTClient):
         permission_overwrites: undefined.UndefinedOr[
             typing.Sequence[channels_.PermissionOverwrite]
         ] = undefined.UNDEFINED,
-        region: undefined.UndefinedOr[voices.VoiceRegionish] = undefined.UNDEFINED,
+        region: undefined.UndefinedOr[typing.Union[voices.VoiceRegion, str]] = undefined.UNDEFINED,
         category: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels_.GuildCategory]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> channels_.GuildStageChannel:
@@ -2477,7 +2478,7 @@ class RESTClientImpl(rest_api.RESTClient):
         permission_overwrites: undefined.UndefinedOr[
             typing.Sequence[channels_.PermissionOverwrite]
         ] = undefined.UNDEFINED,
-        region: undefined.UndefinedOr[voices.VoiceRegionish] = undefined.UNDEFINED,
+        region: undefined.UndefinedOr[typing.Union[voices.VoiceRegion, str]] = undefined.UNDEFINED,
         category: undefined.UndefinedOr[snowflakes.SnowflakeishOr[channels_.GuildCategory]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> channels_.GuildChannel:
@@ -2885,7 +2886,7 @@ class RESTClientImpl(rest_api.RESTClient):
         assert isinstance(response, dict)
         return self._entity_factory.deserialize_vanity_url(response)
 
-    async def fetch_template(self, template: templates.Templateish) -> templates.Template:
+    async def fetch_template(self, template: typing.Union[templates.Template, str]) -> templates.Template:
         template = template if isinstance(template, str) else template.code
         route = routes.GET_TEMPLATE.compile(template=template)
         response = await self._request(route)
@@ -2903,7 +2904,7 @@ class RESTClientImpl(rest_api.RESTClient):
     async def sync_guild_template(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        template: templates.Templateish,
+        template: typing.Union[templates.Template, str],
     ) -> templates.Template:
         template = template if isinstance(template, str) else template.code
         route = routes.PUT_GUILD_TEMPLATE.compile(guild=guild, template=template)
@@ -2913,7 +2914,7 @@ class RESTClientImpl(rest_api.RESTClient):
 
     async def create_guild_from_template(
         self,
-        template: templates.Templateish,
+        template: typing.Union[str, templates.Template],
         name: str,
         *,
         icon: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
@@ -2950,7 +2951,7 @@ class RESTClientImpl(rest_api.RESTClient):
     async def edit_template(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        template: templates.Templateish,
+        template: typing.Union[str, templates.Template],
         *,
         name: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         description: undefined.UndefinedNoneOr[str] = undefined.UNDEFINED,
@@ -2968,7 +2969,7 @@ class RESTClientImpl(rest_api.RESTClient):
     async def delete_template(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        template: templates.Templateish,
+        template: typing.Union[str, templates.Template],
     ) -> templates.Template:
         template = template if isinstance(template, str) else template.code
         route = routes.DELETE_GUILD_TEMPLATE.compile(guild=guild, template=template)

@@ -65,24 +65,24 @@ class TestChannelFollow:
         assert result is mock_app.rest.fetch_webhook.return_value
         mock_app.rest.fetch_webhook.assert_awaited_once_with(54123123)
 
-    def test_channel(self, mock_app):
+    def test_get_channel(self, mock_app):
         mock_channel = mock.Mock(spec=channels.GuildNewsChannel)
         mock_app.cache.get_guild_channel = mock.Mock(return_value=mock_channel)
         follow = channels.ChannelFollow(
             webhook_id=snowflakes.Snowflake(993883), app=mock_app, channel_id=snowflakes.Snowflake(696969)
         )
 
-        result = follow.channel
+        result = follow.get_channel()
 
         assert result is mock_channel
         mock_app.cache.get_guild_channel.assert_called_once_with(696969)
 
-    def test_channel_when_no_cache_trait(self):
+    def test_get_channel_when_no_cache_trait(self):
         follow = channels.ChannelFollow(
             webhook_id=snowflakes.Snowflake(993883), app=object(), channel_id=snowflakes.Snowflake(696969)
         )
 
-        assert follow.channel is None
+        assert follow.get_channel() is None
 
 
 class TestPermissionOverwrite:
@@ -188,7 +188,7 @@ class TestGroupDMChannel:
 class TestTextChannel:
     @pytest.fixture()
     def model(self, mock_app):
-        return hikari_test_helpers.mock_class_namespace(channels.TextChannel)(
+        return hikari_test_helpers.mock_class_namespace(channels.TextableChannel)(
             app=mock_app,
             id=snowflakes.Snowflake(12345679),
             name="foo1",
