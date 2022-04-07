@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,12 @@
 """Provides an interface for REST API implementations to follow."""
 from __future__ import annotations
 
-__all__: typing.List[str] = ["RESTClient", "TokenStrategy"]
+__all__: typing.Sequence[str] = ("RESTClient", "TokenStrategy")
 
 import abc
 import typing
 
+from hikari import scheduled_events
 from hikari import traits
 from hikari import undefined
 
@@ -45,6 +46,7 @@ if typing.TYPE_CHECKING:
     from hikari import guilds
     from hikari import invites
     from hikari import iterators
+    from hikari import locales
     from hikari import messages as messages_
     from hikari import permissions as permissions_
     from hikari import sessions
@@ -1081,7 +1083,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
         embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
-        nonce: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         reply: undefined.UndefinedOr[snowflakes.SnowflakeishOr[messages_.PartialMessage]] = undefined.UNDEFINED,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         mentions_reply: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -1132,12 +1133,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         tts : hikari.undefined.UndefinedOr[builtins.bool]
             If provided, whether the message will be read out by a screen
             reader using Discord's TTS (text-to-speech) system.
-        nonce : hikari.undefined.UndefinedOr[builtins.str]
-            An arbitrary identifier to associate with the message. This
-            can be used to identify it later in received events. If provided,
-            this must be less than 32 bytes. If not provided, then
-            a null value is placed on the message instead. All users can
-            see this value.
         reply : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.messages.PartialMessage]]
             If provided, the message to reply to.
         mentions_everyone : hikari.undefined.UndefinedOr[builtins.bool]
@@ -1988,7 +1983,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         Other Parameters
         ----------------
         token : hikari.undefined.UndefinedOr[builtins.str]
-            If provided, the webhoook token that will be used to fetch
+            If provided, the webhook token that will be used to fetch
             the webhook instead of the token the client was initialized with.
 
         Returns
@@ -2125,7 +2120,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         Other Parameters
         ----------------
         token : hikari.undefined.UndefinedOr[builtins.str]
-            If provided, the webhoook token that will be used to edit
+            If provided, the webhook token that will be used to edit
             the webhook instead of the token the client was initialized with.
         name : hikari.undefined.UndefinedOr[builtins.str]
             If provided, the new webhook name.
@@ -2185,7 +2180,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         Other Parameters
         ----------------
         token : hikari.undefined.UndefinedOr[builtins.str]
-            If provided, the webhoook token that will be used to delete
+            If provided, the webhook token that will be used to delete
             the webhook instead of the token the client was initialized with.
 
         Raises
@@ -2196,7 +2191,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         hikari.errors.UnauthorizedError
             If you are unauthorized to make the request (invalid/missing token).
         hikari.errors.NotFoundError
-            If the webhoook is not found.
+            If the webhook is not found.
         hikari.errors.RateLimitTooLongError
             Raised in the event that a rate limit occurs that is
             longer than `max_rate_limit` when making a request.
@@ -2885,7 +2880,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         Other Parameters
         ----------------
         newest_first : builtins.bool
-            Whether to fetch the newest first or the olders first.
+            Whether to fetch the newest first or the oldest first.
             Defaults to `builtins.False`.
         start_at : hikari.undefined.UndefinedOr[hikari.snowflakes.SearchableSnowflakeishOr[hikari.guilds.PartialGuild]]
             If provided, will start at this snowflake. If you provide
@@ -3258,6 +3253,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
         user: snowflakes.SnowflakeishOr[users.PartialUser],
         *,
+        nickname: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         nick: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         roles: undefined.UndefinedOr[snowflakes.SnowflakeishSequence[guilds.PartialRole]] = undefined.UNDEFINED,
         mute: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -3284,10 +3280,12 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Other Parameters
         ----------------
-        nick : hikari.undefined.UndefinedOr[builtins.str]
+        nickname : hikari.undefined.UndefinedOr[builtins.str]
             If provided, the nick to add to the user when he joins the guild.
 
             Requires the `MANAGE_NICKNAMES` permission on the guild.
+        nick : hikari.undefined.UndefinedOr[builtins.str]
+            Deprecated alias for `nickname`.
         roles : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishSequence[hikari.guilds.PartialRole]]
             If provided, the roles to add to the user when he joins the guild.
             This may be a collection objects or IDs of existing roles.
@@ -3340,9 +3338,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
     @abc.abstractmethod
     async def fetch_voice_regions(self) -> typing.Sequence[voices.VoiceRegion]:
         """Fetch available voice regions.
-
-        !!! note
-            This endpoint doesn't return VIP voice regions.
 
         Returns
         -------
@@ -3413,7 +3408,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         user: undefined.UndefinedOr[snowflakes.SnowflakeishOr[users.PartialUser]] = undefined.UNDEFINED,
         event_type: undefined.UndefinedOr[typing.Union[audit_logs.AuditLogEventType, int]] = undefined.UNDEFINED,
     ) -> iterators.LazyIterator[audit_logs.AuditLog]:
-        """Fetch the guild's audit log.
+        """Fetch pages of the guild's audit log.
 
         Parameters
         ----------
@@ -4215,7 +4210,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         public_updates_channel: undefined.UndefinedNoneOr[
             snowflakes.SnowflakeishOr[channels_.GuildTextChannel]
         ] = undefined.UNDEFINED,
-        preferred_locale: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        preferred_locale: undefined.UndefinedOr[typing.Union[str, locales.Locale]] = undefined.UNDEFINED,
         reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
     ) -> guilds.RESTGuild:
         """Edit a guild.
@@ -4895,6 +4890,40 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         """
 
     @abc.abstractmethod
+    async def fetch_my_member(self, guild: snowflakes.SnowflakeishOr[guilds.PartialGuild]) -> guilds.Member:
+        """Fetch the Oauth token's associated member in a guild.
+
+        !!! warning
+            This endpoint can only be used with a Bearer token. Using this
+            with a Bot token will result in a `hikari.errors.UnauthorizedError`.
+
+        Returns
+        -------
+        hikari.guilds.Member
+            The associated guild member.
+
+        Raises
+        ------
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the guild is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
     async def search_members(
         self,
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
@@ -4946,6 +4975,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
         user: snowflakes.SnowflakeishOr[users.PartialUser],
         *,
+        nickname: undefined.UndefinedNoneOr[str] = undefined.UNDEFINED,
         nick: undefined.UndefinedNoneOr[str] = undefined.UNDEFINED,
         roles: undefined.UndefinedOr[snowflakes.SnowflakeishSequence[guilds.PartialRole]] = undefined.UNDEFINED,
         mute: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -4969,11 +4999,13 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Other Parameters
         ----------------
-        nick : hikari.undefined.UndefinedNoneOr[builtins.str]
+        nickname : hikari.undefined.UndefinedNoneOr[builtins.str]
             If provided, the new nick for the member. If `builtins.None`,
             will remove the members nick.
 
             Requires the `MANAGE_NICKNAMES` permission.
+        nick : hikari.undefined.UndefinedOr[builtins.str]
+            Deprecated alias for `nickname`.
         roles : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishSequence[hikari.guilds.PartialRole]]
             If provided, the new roles for the member.
 
@@ -5927,10 +5959,6 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
     ) -> typing.Sequence[voices.VoiceRegion]:
         """Fetch the available voice regions for a guild.
 
-        !!! note
-            Unlike `RESTClient.fetch_voice_regions`, this will
-            return the VIP regions if the guild has access to them.
-
         Parameters
         ----------
         guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
@@ -6603,8 +6631,11 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         """
 
     @abc.abstractmethod
-    def command_builder(self, name: str, description: str, /) -> special_endpoints.CommandBuilder:
-        r"""Create a command builder for use in `RESTClient.set_application_commands`.
+    def command_builder(self, name: str, description: str) -> special_endpoints.SlashCommandBuilder:
+        r"""Create a slash command builder for use in `RESTClient.set_application_commands`.
+
+        .. deprecated:: 2.0.0.dev106
+            Use `RESTClient.slash_command_builder` instead.
 
         Parameters
         ----------
@@ -6617,7 +6648,51 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Returns
         -------
-        hikari.api.special_endpoints.CommandBuilder
+        hikari.api.special_endpoints.SlashCommandBuilder
+            The created command builder object.
+        """
+
+    @abc.abstractmethod
+    def slash_command_builder(
+        self,
+        name: str,
+        description: str,
+    ) -> special_endpoints.SlashCommandBuilder:
+        r"""Create a command builder for use in `RESTClient.set_application_commands`.
+
+        Parameters
+        ----------
+        name : builtins.str
+            The command's name. This should match the regex `^[\w-]{1,32}$` in
+            Unicode mode and be lowercase.
+        description : builtins.str
+            The description to set for the command if this is a slash command.
+            This should be inclusively between 1-100 characters in length.
+
+        Returns
+        -------
+        hikari.api.special_endpoints.SlashCommandBuilder
+            The created command builder object.
+        """
+
+    @abc.abstractmethod
+    def context_menu_command_builder(
+        self,
+        type: typing.Union[commands.CommandType, int],
+        name: str,
+    ) -> special_endpoints.ContextMenuCommandBuilder:
+        r"""Create a command builder for use in `RESTClient.set_application_commands`.
+
+        Parameters
+        ----------
+        type : commands.CommandType
+            The commands's type.
+        name : builtins.str
+            The command's name.
+
+        Returns
+        -------
+        hikari.api.special_endpoints.ContextMenuCommandBuilder
             The created command builder object.
         """
 
@@ -6625,16 +6700,16 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
     async def fetch_application_command(
         self,
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
-        command: snowflakes.SnowflakeishOr[commands.Command],
+        command: snowflakes.SnowflakeishOr[commands.PartialCommand],
         guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
-    ) -> commands.Command:
+    ) -> commands.PartialCommand:
         """Fetch a command set for an application.
 
         Parameters
         ----------
         application: hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialApplication]
             Object or ID of the application to fetch a command for.
-        command: hikari.snowflakes.SnowflakeishOr[hikari.commands.Command]
+        command: hikari.snowflakes.SnowflakeishOr[hikari.commands.PartialCommand]
             Object or ID of the command to fetch.
 
         Other Parameters
@@ -6646,7 +6721,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Returns
         -------
-        hikari.commands.Command
+        hikari.commands.PartialCommand
             Object of the fetched command.
 
         Raises
@@ -6677,7 +6752,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         self,
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
         guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
-    ) -> typing.Sequence[commands.Command]:
+    ) -> typing.Sequence[commands.PartialCommand]:
         """Fetch the commands set for an application.
 
         Parameters
@@ -6695,7 +6770,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Returns
         -------
-        typing.Sequence[hikari.commands.Command]
+        typing.Sequence[hikari.commands.PartialCommand]
             A sequence of the commands declared for the provided application.
             This will exclusively either contain the commands set for a specific
             guild if `guild` is provided or the global commands if not.
@@ -6733,7 +6808,78 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         *,
         options: undefined.UndefinedOr[typing.Sequence[commands.CommandOption]] = undefined.UNDEFINED,
         default_permission: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
-    ) -> commands.Command:
+    ) -> commands.SlashCommand:
+        r"""Create an application slash command.
+
+        .. deprecated:: 2.0.0.dev106
+            Use `RESTClient.create_slash_command` instead.
+
+        Parameters
+        ----------
+        application: hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialApplication]
+            Object or ID of the application to create a command for.
+        name : builtins.str
+            The command's name. This should match the regex `^[\w-]{1,32}$` in
+            Unicode mode and be lowercase.
+        description : builtins.str
+            The description to set for the command.
+            This should be inclusively between 1-100 characters in length.
+        guild : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            Object or ID of the specific guild this should be made for.
+            If left as `hikari.undefined.UNDEFINED` then this call will create
+            a global command rather than a guild specific one.
+
+        Other Parameters
+        ----------------
+        options : hikari.undefined.UndefinedOr[typing.Sequence[hikari.commands.CommandOption]]
+            A sequence of up to 10 options for this command.
+        default_permission : hikari.undefined.UndefinedOr[builtins.bool]
+            Whether this command should be enabled by default (without any
+            permissions) when added to a guild.
+
+            Defaults to `builtins.True`.
+
+        Returns
+        -------
+        hikari.commands.SlashCommand
+            Object of the created command.
+
+        Raises
+        ------
+        hikari.errors.ForbiddenError
+            If you cannot access the provided application's commands.
+        hikari.errors.NotFoundError
+            If the provided application isn't found.
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def create_slash_command(
+        self,
+        application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
+        name: str,
+        description: str,
+        *,
+        guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
+        options: undefined.UndefinedOr[typing.Sequence[commands.CommandOption]] = undefined.UNDEFINED,
+        default_permission: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+    ) -> commands.SlashCommand:
         r"""Create an application command.
 
         Parameters
@@ -6763,7 +6909,73 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Returns
         -------
-        hikari.commands.Command
+        hikari.commands.SlashCommand
+            Object of the created command.
+
+        Raises
+        ------
+        hikari.errors.ForbiddenError
+            If you cannot access the provided application's commands.
+        hikari.errors.NotFoundError
+            If the provided application isn't found.
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def create_context_menu_command(
+        self,
+        application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
+        type: typing.Union[commands.CommandType, int],
+        name: str,
+        *,
+        guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
+        default_permission: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+    ) -> commands.ContextMenuCommand:
+        r"""Create an application command.
+
+        Parameters
+        ----------
+        application: hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialApplication]
+            Object or ID of the application to create a command for.
+        type : typing.Union[hikari.commands.CommandType, builtins.int]
+            The type of menu command to make.
+
+            Only USER and MESSAGE are valid here.
+        name : builtins.str
+            The command's name. This should match the regex `^[\w-]{1,32}$` in
+            Unicode mode and be lowercase.
+
+        Other Parameters
+        ----------------
+        guild : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            Object or ID of the specific guild this should be made for.
+            If left as `hikari.undefined.UNDEFINED` then this call will create
+            a global command rather than a guild specific one.
+        default_permission : hikari.undefined.UndefinedOr[builtins.bool]
+            Whether this command should be enabled by default (without any
+            permissions) when added to a guild.
+
+            Defaults to `builtins.True`.
+
+        Returns
+        -------
+        hikari.commands.ContextMenuCommand
             Object of the created command.
 
         Raises
@@ -6797,7 +7009,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
         commands: typing.Sequence[special_endpoints.CommandBuilder],
         guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
-    ) -> typing.Sequence[commands.Command]:
+    ) -> typing.Sequence[commands.PartialCommand]:
         """Set the commands for an application.
 
         !!! warning
@@ -6821,7 +7033,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Returns
         -------
-        typing.Sequence[hikari.commands.Command]
+        typing.Sequence[hikari.commands.PartialCommand]
             A sequence of the set command objects.
 
         Raises
@@ -6853,20 +7065,20 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
     async def edit_application_command(
         self,
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
-        command: snowflakes.SnowflakeishOr[commands.Command],
+        command: snowflakes.SnowflakeishOr[commands.PartialCommand],
         guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
         *,
         name: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         description: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         options: undefined.UndefinedOr[typing.Sequence[commands.CommandOption]] = undefined.UNDEFINED,
-    ) -> commands.Command:
+    ) -> commands.PartialCommand:
         """Edit a registered application command.
 
         Parameters
         ----------
         application: hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialApplication]
             Object or ID of the application to edit a command for.
-        command : hikari.snowflakes.SnowflakeishOr[hikari.commands.Command]
+        command : hikari.snowflakes.SnowflakeishOr[hikari.commands.PartialCommand]
             Object or ID of the command to modify.
 
         Other Parameters
@@ -6887,7 +7099,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
 
         Returns
         -------
-        hikari.commands.Command
+        hikari.commands.PartialCommand
             The edited command object.
 
         Raises
@@ -6919,7 +7131,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
     async def delete_application_command(
         self,
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
-        command: snowflakes.SnowflakeishOr[commands.Command],
+        command: snowflakes.SnowflakeishOr[commands.PartialCommand],
         guild: undefined.UndefinedOr[snowflakes.SnowflakeishOr[guilds.PartialGuild]] = undefined.UNDEFINED,
     ) -> None:
         """Delete a registered application command.
@@ -6928,7 +7140,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         ----------
         application: hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialApplication]
             Object or ID of the application to delete a command for.
-        command : hikari.snowflakes.SnowflakeishOr[hikari.commands.Command]
+        command : hikari.snowflakes.SnowflakeishOr[hikari.commands.PartialCommand]
             Object or ID of the command to delete.
 
         Other Parameters
@@ -7009,7 +7221,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         self,
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        command: snowflakes.SnowflakeishOr[commands.Command],
+        command: snowflakes.SnowflakeishOr[commands.PartialCommand],
     ) -> commands.GuildCommandPermissions:
         """Fetch the permissions registered for a specific command in a guild.
 
@@ -7019,8 +7231,8 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             Object or ID of the application to fetch the command permissions for.
         guild : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]]
             Object or ID of the guild to fetch the command permissions for.
-        command: hikari.snowflakes.SnowflakeishOr[hikari.commands.Command]
-            Objecr or ID of the command to fetch the command permissions for.
+        command: hikari.snowflakes.SnowflakeishOr[hikari.commands.PartialCommand]
+            Object or ID of the command to fetch the command permissions for.
 
         Returns
         -------
@@ -7056,7 +7268,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
         permissions: typing.Mapping[
-            snowflakes.SnowflakeishOr[commands.Command], typing.Sequence[commands.CommandPermission]
+            snowflakes.SnowflakeishOr[commands.PartialCommand], typing.Sequence[commands.CommandPermission]
         ],
     ) -> typing.Sequence[commands.GuildCommandPermissions]:
         """Set permissions in a guild for multiple commands.
@@ -7071,7 +7283,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             Object or ID of the application to set the command permissions for.
         guild : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]]
             Object or ID of the guild to set the command permissions for.
-        permissions : typing.Mapping[hikari.snowflakes.SnowflakeishOr[hikari.commands.Command], typing.Sequence[hikari.commands.CommandPermission]]
+        permissions : typing.Mapping[hikari.snowflakes.SnowflakeishOr[hikari.commands.PartialCommand], typing.Sequence[hikari.commands.CommandPermission]]
             Mapping of objects and/or IDs of commands to sequences of the commands
             to set for the specified guild.
 
@@ -7111,7 +7323,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         self,
         application: snowflakes.SnowflakeishOr[guilds.PartialApplication],
         guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
-        command: snowflakes.SnowflakeishOr[commands.Command],
+        command: snowflakes.SnowflakeishOr[commands.PartialCommand],
         permissions: typing.Sequence[commands.CommandPermission],
     ) -> commands.GuildCommandPermissions:
         """Set permissions for a specific command.
@@ -7125,7 +7337,7 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             Object or ID of the application to set the command permissions for.
         guild : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]]
             Object or ID of the guild to set the command permissions for.
-        command : hikari.snowflakes.SnowflakeishOr[hikari.commands.Command]
+        command : hikari.snowflakes.SnowflakeishOr[hikari.commands.PartialCommand]
             Object or ID of the command to set the permissions for.
         permissions : typing.Sequence[hikari.commands.CommandPermission]
             Sequence of up to 10 of the permission objects to set.
@@ -7173,6 +7385,18 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         -------
         hikari.api.special_endpoints.InteractionDeferredBuilder
             The deferred message interaction response builder object.
+        """
+
+    @abc.abstractmethod
+    def interaction_autocomplete_builder(
+        self, choices: typing.Sequence[commands.CommandChoice]
+    ) -> special_endpoints.InteractionAutocompleteBuilder:
+        """Create a builder for an autocomplete interaction response.
+
+        Returns
+        -------
+        hikari.api.special_endpoints.InteractionAutocompleteBuilder
+            The autocomplete interaction response builder object.
         """
 
     @abc.abstractmethod
@@ -7243,6 +7467,8 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         *,
         flags: typing.Union[int, messages_.MessageFlag, undefined.UndefinedType] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
+        attachment: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
+        attachments: undefined.UndefinedOr[typing.Sequence[files.Resourceish]] = undefined.UNDEFINED,
         component: undefined.UndefinedOr[special_endpoints.ComponentBuilder] = undefined.UNDEFINED,
         components: undefined.UndefinedOr[typing.Sequence[special_endpoints.ComponentBuilder]] = undefined.UNDEFINED,
         embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
@@ -7284,6 +7510,12 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
             no `embeds` kwarg is provided, then this will instead
             update the embed. This allows for simpler syntax when
             sending an embed alone.
+        attachment : hikari.undefined.UndefinedOr[hikari.files.Resourceish],
+            If provided, the message attachment. This can be a resource,
+            or string of a path on your computer or a URL.
+        attachments : hikari.undefined.UndefinedOr[typing.Sequence[hikari.files.Resourceish]],
+            If provided, the message attachments. These can be resources, or
+            strings consisting of paths on your computer or URLs.
         component : hikari.undefined.UndefinedOr[hikari.api.special_endpoints.ComponentBuilder]
             If provided, builder object of the component to include in this message.
         components : hikari.undefined.UndefinedOr[typing.Sequence[hikari.api.special_endpoints.ComponentBuilder]]
@@ -7546,6 +7778,49 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         """
 
     @abc.abstractmethod
+    async def create_autocomplete_response(
+        self,
+        interaction: snowflakes.SnowflakeishOr[base_interactions.PartialInteraction],
+        token: str,
+        choices: typing.Sequence[commands.CommandChoice],
+    ) -> None:
+        """Create the initial response for an autocomplete interaction.
+
+        Parameters
+        ----------
+        interaction : hikari.snowflakes.SnowflakeishOr[hikari.interactions.base_interactions.PartialInteraction]
+            Object or ID of the interaction this response is for.
+        token : builtins.str
+            The command interaction's token.
+
+        Other Parameters
+        ----------------
+        choices : typing.Sequence[commands.CommandChoice]
+            The autocomplete choices themselves.
+
+        Raises
+        ------
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the interaction is not found or if the interaction's initial
+            response has already been created.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """  # noqa: E501 - Line too long
+
+    @abc.abstractmethod
     def build_action_row(self) -> special_endpoints.ActionRowBuilder:
         """Build an action row message component for use in message create and REST calls.
 
@@ -7553,4 +7828,537 @@ class RESTClient(traits.NetworkSettingsAware, abc.ABC):
         -------
         hikari.api.special_endpoints.ActionRowBuilder
             The initialised action row builder.
+        """
+
+    @abc.abstractmethod
+    async def fetch_scheduled_event(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        event: snowflakes.SnowflakeishOr[scheduled_events.ScheduledEvent],
+        /,
+    ) -> scheduled_events.ScheduledEvent:
+        """Fetch a channel.
+
+        Parameters
+        ----------
+        channel : hikari.snowflakes.SnowflakeishOr[hikari.channels.PartialChannel]
+            The channel to fetch. This may be the object or the ID of an
+            existing channel.
+
+        Returns
+        -------
+        hikari.scheduled_events.ScheduledEvent
+            The scheduled event
+
+        Raises
+        ------
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing the permission needed to view this event.
+
+            For `VOICE` and `STAGE_CHANNEL` events, `VIEW_CHANNEL` is required
+            in their associated guild to see the event.
+        hikari.errors.NotFoundError
+            If the guild or event is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def fetch_scheduled_events(
+        self, guild: snowflakes.SnowflakeishOr[guilds.PartialGuild], /
+    ) -> typing.Sequence[scheduled_events.ScheduledEvent]:
+        """Fetch the scheduled events for a guild.
+
+        !!! note
+            `VOICE` and `STAGE_CHANNEL` events are only included if the bot has
+            `VOICE` or `STAGE_CHANNEL` permissions in the associated channel.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            Object or ID of the guild to fetch scheduled events for.
+
+        Returns
+        -------
+        typing.Sequence[hikari.scheduled_events.ScheduledEvent]
+            Sequence of the scheduled events.
+
+        Raises
+        ------
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the guild is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def create_stage_event(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        channel: snowflakes.SnowflakeishOr[channels_.PartialChannel],
+        name: str,
+        /,
+        start_time: datetime.datetime,
+        *,
+        description: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        end_time: undefined.UndefinedOr[datetime.datetime] = undefined.UNDEFINED,
+        image: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
+        privacy_level: typing.Union[
+            int, scheduled_events.EventPrivacyLevel
+        ] = scheduled_events.EventPrivacyLevel.GUILD_ONLY,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> scheduled_events.ScheduledStageEvent:
+        """Create a scheduled stage event.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            The guild to create the event in.
+        channel : hikari.snowflakes.SnowflakeishOr[hikari.channels.PartialChannel]
+            The stage channel to create the event in.
+        name : str
+            The name of the event.
+        start_time : datetime.datetime
+            When the event is scheduled to start.
+
+        Other Parameters
+        ----------------
+        description : hikari.undefined.UndefinedOr[str]
+            The event's description.
+        end_time : hikari.undefined.UndefinedOr[datetime.datetime]
+            When the event should be scheduled to end.
+        image : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
+            The event's display image.
+        privacy_level : hikari.undefined.UndefinedOr[hikari.scheduled_events.EventPrivacyLevel]
+            The event's privacy level.
+
+            This effects who can view and subscribe to the event.
+        reason : hikari.undefined.UndefinedOr[builtins.str]
+            If provided, the reason that will be recorded in the audit logs.
+            Maximum of 512 characters.
+
+        Returns
+        -------
+        hikari.scheduled_events.ScheduledStageEvent
+            The created scheduled stage event.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing permissions to create the scheduled event.
+
+            You need the following permissions in the target stage channel:
+            `MANAGE_EVENTS`, `VIEW_CHANNEL` and `CONNECT`.
+        hikari.errors.NotFoundError
+            If the guild or event is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def create_voice_event(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        channel: snowflakes.SnowflakeishOr[channels_.PartialChannel],
+        name: str,
+        /,
+        start_time: datetime.datetime,
+        *,
+        description: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        end_time: undefined.UndefinedOr[datetime.datetime] = undefined.UNDEFINED,
+        image: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
+        privacy_level: typing.Union[
+            int, scheduled_events.EventPrivacyLevel
+        ] = scheduled_events.EventPrivacyLevel.GUILD_ONLY,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> scheduled_events.ScheduledVoiceEvent:
+        """Create a scheduled voice event.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            The guild to create the event in.
+        channel : hikari.snowflakes.SnowflakeishOr[hikari.channels.PartialChannel]
+            The voice channel to create the event in.
+        name : str
+            The name of the event.
+        start_time : datetime.datetime
+            When the event is scheduled to start.
+
+        Other Parameters
+        ----------------
+        description : hikari.undefined.UndefinedOr[str]
+            The event's description.
+        end_time : hikari.undefined.UndefinedOr[datetime.datetime]
+            When the event should be scheduled to end.
+        image : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
+            The event's display image.
+        privacy_level : hikari.undefined.UndefinedOr[hikari.scheduled_events.EventPrivacyLevel]
+            The event's privacy level.
+
+            This effects who can view and subscribe to the event.
+        reason : hikari.undefined.UndefinedOr[builtins.str]
+            If provided, the reason that will be recorded in the audit logs.
+            Maximum of 512 characters.
+
+        Returns
+        -------
+        hikari.scheduled_events.ScheduledVoiceEvent
+            The created scheduled voice event.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing permissions to create the scheduled event.
+
+            You need the following permissions in the target voice channel:
+            `MANAGE_EVENTS`, `VIEW_CHANNEL` and `CONNECT`.
+        hikari.errors.NotFoundError
+            If the guild or event is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def create_external_event(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        name: str,
+        /,
+        location: str,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        *,
+        description: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        image: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
+        privacy_level: typing.Union[
+            int, scheduled_events.EventPrivacyLevel
+        ] = scheduled_events.EventPrivacyLevel.GUILD_ONLY,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> scheduled_events.ScheduledExternalEvent:
+        """Create a scheduled external event.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            The guild to create the event in.
+        name : str
+            The name of the event.
+        location : str
+            The location the event.
+        start_time : datetime.datetime
+            When the event is scheduled to start.
+        end_time : datetime.datetime
+            When the event is scheduled to end.
+
+        Other Parameters
+        ----------------
+        description : hikari.undefined.UndefinedOr[str]
+            The event's description.
+        image : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
+            The event's display image.
+        privacy_level : hikari.undefined.UndefinedOr[hikari.scheduled_events.EventPrivacyLevel]
+            The event's privacy level.
+
+            This effects who can view and subscribe to the event.
+        reason : hikari.undefined.UndefinedOr[builtins.str]
+            If provided, the reason that will be recorded in the audit logs.
+            Maximum of 512 characters.
+
+        Returns
+        -------
+        hikari.scheduled_events.ScheduledExternalEvent
+            The created scheduled external event.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing the `MANAGE_EVENTS` permission.
+        hikari.errors.NotFoundError
+            If the guild or event is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def edit_scheduled_event(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        event: snowflakes.SnowflakeishOr[scheduled_events.ScheduledEvent],
+        /,
+        *,
+        channel: undefined.UndefinedNoneOr[snowflakes.SnowflakeishOr[channels_.PartialChannel]] = undefined.UNDEFINED,
+        description: undefined.UndefinedNoneOr[str] = undefined.UNDEFINED,
+        entity_type: undefined.UndefinedOr[
+            typing.Union[int, scheduled_events.ScheduledEventType]
+        ] = undefined.UNDEFINED,
+        image: undefined.UndefinedOr[files.Resourceish] = undefined.UNDEFINED,
+        location: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        name: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+        privacy_level: undefined.UndefinedOr[
+            typing.Union[int, scheduled_events.EventPrivacyLevel]
+        ] = undefined.UNDEFINED,
+        start_time: undefined.UndefinedOr[datetime.datetime] = undefined.UNDEFINED,
+        end_time: undefined.UndefinedNoneOr[datetime.datetime] = undefined.UNDEFINED,
+        status: undefined.UndefinedOr[typing.Union[int, scheduled_events.ScheduledEventStatus]] = undefined.UNDEFINED,
+        reason: undefined.UndefinedOr[str] = undefined.UNDEFINED,
+    ) -> scheduled_events.ScheduledEvent:
+        """Edit a scheduled event.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            The guild to edit the event in.
+        event : hikari.snowflakes.SnowflakeishOr[hikari.scheduled_events.ScheduledEvent]
+            The scheduled event to edit.
+
+        Other Parameters
+        ----------------
+        channel : hikari.undefined.UndefinedNoneOr[hikari.snowflakes.SnowflakeishOr[hikari.channels.PartialChannel]]
+            The channel a `VOICE` or `STAGE` event should be associated with.
+        description : hikari.undefined.UndefinedNoneOr[str]
+            The event's description.
+        entity_type : hikari.undefined.UndefinedOr[hikari.scheduled_events.ScheduledEventType]
+            The type of entity the event should target.
+        image : hikari.undefined.UndefinedOr[hikari.files.Resourceish]
+            The event's display image.
+        location : hikari.undefined.UndefinedOr[str]
+            The location of an `EXTERNAL` event.
+
+            Must be passed when changing an event to `EXTERNAL`.
+        name : hikari.undefined.UndefinedOr[str]
+            The event's name.
+        privacy_level : hikari.undefined.UndefinedOr[hikari.scheduled_events.EventPrivacyLevel]
+            The event's privacy level.
+
+            This effects who can view and subscribe to the event.
+        start_time : hikari.undefined.UndefinedOr[datetime.datetime]
+            When the event should be scheduled to start.
+        end_time : hikari.undefined.UndefinedNoneOr[datetime.datetime]
+            When the event should be scheduled to end.
+
+            This can only be set to `None` for `STAGE` and `VOICE` events.
+            Must be provided when changing an event to `EXTERNAL`.
+        status : hikari.undefined.UndefinedOr[hikari.scheduled_events.ScheduledEventStatus]
+            The event's new status.
+
+            `SCHEDULED` events can be set to `ACTIVE` and `CANCELED`.
+            `ACTIVE` events can only be set to `COMPLETED`.
+        reason : hikari.undefined.UndefinedOr[builtins.str]
+            If provided, the reason that will be recorded in the audit logs.
+            Maximum of 512 characters.
+
+        Returns
+        -------
+        hikari.scheduled_events.ScheduledEvent
+            The edited scheduled event.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing permissions to edit the scheduled event.
+
+            For `VOICE` and `STAGE_INSTANCE` events, you need the following
+            permissions in the event's associated channel: `MANAGE_EVENTS`,
+            `VIEW_CHANNEL` and `CONNECT`.
+
+            For `EXTERNAL` events you just need the `MANAGE_EVENTS` permission.
+        hikari.errors.NotFoundError
+            If the guild or event is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    async def delete_scheduled_event(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        event: snowflakes.SnowflakeishOr[scheduled_events.ScheduledEvent],
+        /,
+    ) -> None:
+        """Delete a scheduled event.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            The guild to delete the event from.
+        event : hikari.snowflakes.SnowflakeishOr[hikari.scheduled_events.ScheduledEvent]
+            The scheduled event to delete.
+
+        Raises
+        ------
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.ForbiddenError
+            If you are missing the `MANAGE_EVENTS` permission.
+        hikari.errors.NotFoundError
+            If the guild or event is not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+        """
+
+    @abc.abstractmethod
+    def fetch_scheduled_event_users(
+        self,
+        guild: snowflakes.SnowflakeishOr[guilds.PartialGuild],
+        event: snowflakes.SnowflakeishOr[scheduled_events.ScheduledEvent],
+        /,
+        *,
+        newest_first: bool = False,
+        start_at: undefined.UndefinedOr[snowflakes.SearchableSnowflakeishOr[users.PartialUser]] = undefined.UNDEFINED,
+    ) -> iterators.LazyIterator[scheduled_events.ScheduledEventUser]:
+        """Asynchronously iterate over the users who're subscribed to a scheduled event.
+
+        Parameters
+        ----------
+        guild : hikari.snowflakes.SnowflakeishOr[hikari.guilds.PartialGuild]
+            The guild to fetch the scheduled event users from.
+        event : hikari.snowflakes.SnowflakeishOr[hikari.scheduled_events.ScheduledEvent]
+            The scheduled event to fetch the subscribed users for.
+
+        Other Parameters
+        ----------------
+        newest_first : builtins.bool
+            Whether to fetch the newest first or the oldest first.
+
+            Defaults to `builtins.False`.
+        start_at : hikari.undefined.UndefinedOr[hikari.snowflakes.SearchableSnowflakeishOr[hikari.guilds.PartialGuild]]
+            If provided, will start at this snowflake. If you provide
+            a datetime object, it will be transformed into a snowflake. This
+            may also be a scheduled event object object. In this case, the
+            date the object was first created will be used.
+
+        Returns
+        -------
+        hikari.iterators.LazyIterator[hikari.scheduled_events.ScheduledEventUser]
+            The token's associated guilds.
+
+        !!! note
+            This call is not a coroutine function, it returns a special type of
+            lazy iterator that will perform API calls as you iterate across it.
+            See `hikari.iterators` for the full API for this iterator type.
+
+        Raises
+        ------
+        hikari.errors.BadRequestError
+            If any of the fields that are passed have an invalid value.
+        hikari.errors.UnauthorizedError
+            If you are unauthorized to make the request (invalid/missing token).
+        hikari.errors.NotFoundError
+            If the guild or event was not found.
+        hikari.errors.RateLimitTooLongError
+            Raised in the event that a rate limit occurs that is
+            longer than `max_rate_limit` when making a request.
+        hikari.errors.RateLimitedError
+            Usually, Hikari will handle and retry on hitting
+            rate-limits automatically. This includes most bucket-specific
+            rate-limits and global rate-limits. In some rare edge cases,
+            however, Discord implements other undocumented rules for
+            rate-limiting, such as limits per attribute. These cannot be
+            detected or handled normally by Hikari due to their undocumented
+            nature, and will trigger this exception if they occur.
+        hikari.errors.InternalServerError
+            If an internal error occurs on Discord while handling the request.
+
+        !!! note
+            The exceptions on this endpoint will only be raised once the
+            result is awaited or iterated over. Invoking this function
+            itself will not raise anything.
         """

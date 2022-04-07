@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ from hikari import permissions
 from hikari import snowflakes
 from hikari import undefined
 from hikari import urls
+from hikari import users
 from hikari.impl import bot
 from hikari.internal import routes
 from hikari.internal import time
@@ -261,6 +262,15 @@ class TestMember:
     def test_avatar_url_property(self, model, mock_user):
         assert model.avatar_url is mock_user.avatar_url
 
+    def test_display_avatar_url_when_guild_hash_is_None(self, model, mock_user):
+        with mock.patch.object(guilds.Member, "make_guild_avatar_url") as mock_make_guild_avatar_url:
+            assert model.display_avatar_url is mock_make_guild_avatar_url.return_value
+
+    def test_display_guild_avatar_url_when_guild_hash_is_not_None(self, model, mock_user):
+        with mock.patch.object(guilds.Member, "make_guild_avatar_url", return_value=None):
+            with mock.patch.object(users.User, "display_avatar_url") as mock_display_avatar_url:
+                assert model.display_avatar_url is mock_display_avatar_url
+
     def test_banner_hash_property(self, model, mock_user):
         assert model.banner_hash is mock_user.banner_hash
 
@@ -286,7 +296,7 @@ class TestMember:
         with mock.patch.object(time, "utc_datetime", return_value=datetime.datetime(2021, 10, 18)):
             assert model.communication_disabled_until() is None
 
-    def test_comminucation_disabled_until_when_raw_communication_disabled_until_is_in_the_past(self, model):
+    def test_communication_disabled_until_when_raw_communication_disabled_until_is_in_the_past(self, model):
         model.raw_communication_disabled_until = datetime.datetime(2021, 10, 18)
 
         with mock.patch.object(time, "utc_datetime", return_value=datetime.datetime(2021, 11, 22)):
@@ -419,7 +429,7 @@ class TestMember:
         model.app.rest.edit_member = mock.AsyncMock()
         disabled_until = datetime.datetime(2021, 11, 17)
         edit = await model.edit(
-            nick="Imposter",
+            nickname="Imposter",
             roles=[123, 432, 345],
             mute=False,
             deaf=True,
@@ -431,7 +441,7 @@ class TestMember:
         model.app.rest.edit_member.assert_awaited_once_with(
             456,
             123,
-            nick="Imposter",
+            nickname="Imposter",
             roles=[123, 432, 345],
             mute=False,
             deaf=True,
@@ -440,6 +450,29 @@ class TestMember:
             reason="I'm God",
         )
 
+        assert edit == model.app.rest.edit_member.return_value
+
+    @pytest.mark.asyncio()
+    async def test_edit_when_deprecated_nick_field(self, model):
+        model.app.rest.edit_member = mock.AsyncMock()
+
+        with pytest.warns(
+            DeprecationWarning,
+            match="'nick' is deprecated and will be removed in a following version. You can use 'nickname' instead.",
+        ):
+            edit = await model.edit(nick="meow")
+
+        model.app.rest.edit_member.assert_awaited_once_with(
+            456,
+            123,
+            nickname="meow",
+            roles=undefined.UNDEFINED,
+            mute=undefined.UNDEFINED,
+            deaf=undefined.UNDEFINED,
+            voice_channel=undefined.UNDEFINED,
+            communication_disabled_until=undefined.UNDEFINED,
+            reason=undefined.UNDEFINED,
+        )
         assert edit == model.app.rest.edit_member.return_value
 
     def test_default_avatar_url_property(self, model, mock_user):
@@ -458,6 +491,26 @@ class TestMember:
     def test_mention_property_when_no_nickname(self, model, mock_user):
         model.nickname = None
         assert model.mention == mock_user.mention
+
+    def test_get_guild(self, model):
+        guild = mock.Mock(id=456)
+        model.user.app.cache.get_guild.side_effect = [guild]
+
+        assert model.get_guild() == guild
+
+        model.user.app.cache.get_guild.assert_has_calls([mock.call(456)])
+
+    def test_get_guild_when_guild_not_in_cache(self, model):
+        model.user.app.cache.get_guild.side_effect = [None]
+
+        assert model.get_guild() is None
+
+        model.user.app.cache.get_guild.assert_has_calls([mock.call(456)])
+
+    def test_get_guild_when_no_cache_trait(self, model):
+        model.user.app = object()
+
+        assert model.get_guild() is None
 
     def test_get_roles(self, model):
         role1 = mock.Mock(id=321, position=2)
@@ -1098,6 +1151,38 @@ class TestGuild:
             hash="banner_hash",
             size=512,
             file_format="url",
+        )
+
+    def test_make_banner_url_when_format_is_None_and_banner_hash_is_for_gif(self, model):
+        model.banner_hash = "a_18dnf8dfbakfdh"
+
+        with mock.patch.object(
+            routes, "CDN_GUILD_BANNER", new=mock.Mock(compile_to_file=mock.Mock(return_value="file"))
+        ) as route:
+            assert model.make_banner_url(ext=None, size=4096) == "file"
+
+        route.compile_to_file.assert_called_once_with(
+            urls.CDN_URL,
+            guild_id=model.id,
+            hash="a_18dnf8dfbakfdh",
+            size=4096,
+            file_format="gif",
+        )
+
+    def test_make_banner_url_when_format_is_None_and_banner_hash_is_not_for_gif(self, model):
+        model.banner_hash = "18dnf8dfbakfdh"
+
+        with mock.patch.object(
+            routes, "CDN_GUILD_BANNER", new=mock.Mock(compile_to_file=mock.Mock(return_value="file"))
+        ) as route:
+            assert model.make_banner_url(ext=None, size=4096) == "file"
+
+        route.compile_to_file.assert_called_once_with(
+            urls.CDN_URL,
+            guild_id=model.id,
+            hash=model.banner_hash,
+            size=4096,
+            file_format="png",
         )
 
     def test_make_banner_url_when_no_hash(self, model):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-__all__: typing.List[str] = [
+__all__: typing.Sequence[str] = (
     "Embed",
     "EmbedResource",
     "EmbedResourceWithProxy",
@@ -34,7 +34,7 @@ __all__: typing.List[str] = [
     "EmbedAuthor",
     "EmbedFooter",
     "EmbedField",
-]
+)
 
 import textwrap
 import typing
@@ -991,3 +991,26 @@ class Embed:
             else:
                 return True
         return False
+
+    def total_length(self) -> int:
+        """Get the total character count of the embed.
+
+        Returns
+        -------
+        builtins.int
+            The total character count of this embed, including title, description,
+            fields, footer, and author combined.
+        """
+        total = len(self._title or "") + len(self._description or "")
+
+        if self._fields:
+            for field in self._fields:
+                total += len(field.name) + len(field.value)
+
+        if self._footer and self._footer.text:
+            total += len(self._footer.text)
+
+        if self._author and self._author.name:
+            total += len(self._author.name)
+
+        return total

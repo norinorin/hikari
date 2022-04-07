@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,7 @@ setuptools.setup(
     install_requires=parse_requirements_file("requirements.txt"),
     extras_require={
         "speedups": parse_requirements_file("speedup-requirements.txt"),
+        "server": parse_requirements_file("server-requirements.txt"),
     },
     test_suite="tests",
     include_package_data=True,

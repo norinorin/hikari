@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,4 @@ def verify_types(session: nox.Session) -> None:
     """Verify the "type completeness" of types exported by the library using Pyright."""
     session.install("-r", "dev-requirements.txt")
     session.install(".")
-    # session.env["PYRIGHT_PYTHON_GLOBAL_NODE"] = "off"
-    session.env["PYRIGHT_PYTHON_FORCE_VERSION"] = config.PYRIGHT_VERSION
-    session.run("python", "-m", "pyright", "--version")
-    session.run("python", "-m", "pyright", "--verifytypes", "hikari", "--ignoreexternal")
+    session.run("python", "-m", "pyright", "--verifytypes", config.MAIN_PACKAGE, "--ignoreexternal")

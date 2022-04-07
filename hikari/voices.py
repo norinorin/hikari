@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-__all__: typing.List[str] = ["VoiceRegion", "VoiceState"]
+__all__: typing.Sequence[str] = ("VoiceRegion", "VoiceState")
 
 import typing
 
@@ -115,9 +115,6 @@ class VoiceRegion:
 
     name: str = attr.field(eq=False, hash=False, repr=True)
     """The name of this region."""
-
-    is_vip: bool = attr.field(eq=False, hash=False, repr=False)
-    """Whether this region is vip-only."""
 
     is_optimal_location: bool = attr.field(eq=False, hash=False, repr=False)
     """Whether this region's server is closest to the current user's client."""

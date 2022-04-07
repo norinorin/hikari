@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,7 @@
 """Events fired when users begin typing in channels."""
 from __future__ import annotations
 
-__all__: typing.List[str] = [
-    "TypingEvent",
-    "GuildTypingEvent",
-    "DMTypingEvent",
-]
+__all__: typing.Sequence[str] = ("TypingEvent", "GuildTypingEvent", "DMTypingEvent")
 
 import abc
 import typing

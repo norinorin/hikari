@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,16 @@ STUBGEN_GENERATE = [
 @nox.session(reuse_venv=True)
 def mypy(session: nox.Session) -> None:
     """Perform static type analysis on Python source code."""
-    session.install("-r", "requirements.txt", "-r", "speedup-requirements.txt", "-r", "dev-requirements.txt")
+    session.install(
+        "-r",
+        "requirements.txt",
+        "-r",
+        "speedup-requirements.txt",
+        "-r",
+        "server-requirements.txt",
+        "-r",
+        "dev-requirements.txt",
+    )
 
     _generate_stubs(session)
 

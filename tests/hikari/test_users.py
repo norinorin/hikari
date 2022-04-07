@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -75,7 +75,6 @@ class TestPartialUser:
             attachments=attachments,
             component=component,
             components=components,
-            nonce="nonce",
             tts=True,
             reply=reply,
             mentions_everyone=False,
@@ -97,7 +96,6 @@ class TestPartialUser:
             attachments=attachments,
             component=component,
             components=components,
-            nonce="nonce",
             tts=True,
             mentions_everyone=False,
             reply=reply,
@@ -128,7 +126,6 @@ class TestPartialUser:
             attachments=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
-            nonce=undefined.UNDEFINED,
             tts=undefined.UNDEFINED,
             mentions_everyone=undefined.UNDEFINED,
             reply=undefined.UNDEFINED,
@@ -157,7 +154,6 @@ class TestPartialUser:
             attachments=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
-            nonce=undefined.UNDEFINED,
             tts=undefined.UNDEFINED,
             mentions_everyone=undefined.UNDEFINED,
             reply=undefined.UNDEFINED,
@@ -243,6 +239,15 @@ class TestUser:
             size=4096,
             file_format="url",
         )
+
+    def test_display_avatar_url_when_avatar_url(self, obj):
+        with mock.patch.object(users.User, "make_avatar_url") as mock_make_avatar_url:
+            assert obj.display_avatar_url is mock_make_avatar_url.return_value
+
+    def test_display_avatar_url_when_no_avatar_url(self, obj):
+        with mock.patch.object(users.User, "make_avatar_url", return_value=None):
+            with mock.patch.object(users.User, "default_avatar_url") as mock_default_avatar_url:
+                assert obj.display_avatar_url is mock_default_avatar_url
 
     def test_default_avatar(self, obj):
         obj.avatar_hash = "18dnf8dfbakfdh"

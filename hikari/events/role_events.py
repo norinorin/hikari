@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +23,7 @@
 """Events pertaining to manipulation of roles within guilds."""
 from __future__ import annotations
 
-__all__: typing.List[str] = [
-    "RoleEvent",
-    "RoleCreateEvent",
-    "RoleUpdateEvent",
-    "RoleDeleteEvent",
-]
+__all__: typing.Sequence[str] = ("RoleEvent", "RoleCreateEvent", "RoleUpdateEvent", "RoleDeleteEvent")
 
 import abc
 import typing

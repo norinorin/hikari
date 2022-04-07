@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -74,6 +74,8 @@ class TestMessageResponseMixin:
         mock_embed_2 = object()
         mock_component = object()
         mock_components = object(), object()
+        mock_attachment = object()
+        mock_attachments = object(), object()
         await mock_message_response_mixin.create_initial_response(
             base_interactions.ResponseType.MESSAGE_CREATE,
             "content",
@@ -83,6 +85,8 @@ class TestMessageResponseMixin:
             embeds=[mock_embed_2],
             component=mock_component,
             components=mock_components,
+            attachment=mock_attachment,
+            attachments=mock_attachments,
             mentions_everyone=False,
             user_mentions=[123432],
             role_mentions=[6324523],
@@ -99,6 +103,8 @@ class TestMessageResponseMixin:
             embeds=[mock_embed_2],
             component=mock_component,
             components=mock_components,
+            attachment=mock_attachment,
+            attachments=mock_attachments,
             mentions_everyone=False,
             user_mentions=[123432],
             role_mentions=[6324523],
@@ -121,6 +127,8 @@ class TestMessageResponseMixin:
             embeds=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
+            attachment=undefined.UNDEFINED,
+            attachments=undefined.UNDEFINED,
             mentions_everyone=undefined.UNDEFINED,
             user_mentions=undefined.UNDEFINED,
             role_mentions=undefined.UNDEFINED,

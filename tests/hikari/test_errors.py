@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -86,6 +86,10 @@ class TestHTTPResponseError:
 
     def test_str(self, error):
         assert str(error) == "Bad Request 400: (12345) 'message' for https://some.url"
+
+    def test_str_when_int_status_code(self, error):
+        error.status = 699
+        assert str(error) == "Unknown Status 699: (12345) 'message' for https://some.url"
 
     def test_str_when_message_is_None(self, error):
         error.message = None

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-__all__: typing.List[str] = [
+__all__: typing.Sequence[str] = (
     "InviteApplication",
     "Application",
     "ApplicationFlags",
@@ -42,7 +42,7 @@ __all__: typing.List[str] = [
     "TeamMembershipState",
     "TokenType",
     "get_token_id",
-]
+)
 
 import base64
 import typing
@@ -88,6 +88,12 @@ class ApplicationFlags(enums.Flag):
 
     EMBEDDED = 1 << 17
     """Denotes that the application has functionality that's specially embedded in Discord's client."""
+
+    MESSAGE_CONTENT_INTENT = 1 << 18
+    """Denotes that the application has message content intent enabled in it's dashboard."""
+
+    MESSAGE_CONTENT_INTENT_LIMITED = 1 << 19
+    """Denotes that the application has message content access while pending verification."""
 
 
 @typing.final
@@ -220,6 +226,9 @@ class OAuth2Scope(str, enums.Enum):
 
     This is used during authorization code grants.
     """
+
+    GUILDS_MEMBERS_READ = "guilds.members.read"
+    """Used to read the current user's guild members."""
 
 
 @typing.final
@@ -478,14 +487,14 @@ class InviteApplication(guilds.PartialApplication):
     """The client application that models may use for procedures."""
 
     cover_image_hash: typing.Optional[str] = attr.field(eq=False, hash=False, repr=False)
-    """The CDN's hash of this application's cover image, used in the store or for embedded games."""
+    """The CDN's hash of this application's default rich presence invite cover image."""
 
     public_key: bytes = attr.field(eq=False, hash=False, repr=False)
     """The key used for verifying interaction and GameSDK payload signatures."""
 
     @property
     def cover_image_url(self) -> typing.Optional[files.URL]:
-        """Cover image URL used in the store or for embedded games.
+        """Rich presence cover image URL for this application, if set.
 
         Returns
         -------
@@ -495,7 +504,7 @@ class InviteApplication(guilds.PartialApplication):
         return self.make_cover_image_url()
 
     def make_cover_image_url(self, *, ext: str = "png", size: int = 4096) -> typing.Optional[files.URL]:
-        """Generate the cover image URL used in the store or for embedded games, if set.
+        """Generate the rich presence cover image URL for this application, if set.
 
         Parameters
         ----------
@@ -563,20 +572,8 @@ class Application(guilds.PartialApplication):
     If the application is not part of a team, this will be `builtins.None`.
     """
 
-    guild_id: typing.Optional[snowflakes.Snowflake] = attr.field(eq=False, hash=False, repr=False)
-    """The ID of the guild this application is linked to if sold on Discord."""
-
-    primary_sku_id: typing.Optional[snowflakes.Snowflake] = attr.field(eq=False, hash=False, repr=False)
-    """The ID of the primary "Game SKU" of a game that's sold on Discord."""
-
-    slug: typing.Optional[str] = attr.field(eq=False, hash=False, repr=False)
-    """The URL "slug" that is used to point to this application's store page.
-
-    Only applicable to applications sold on Discord.
-    """
-
     cover_image_hash: typing.Optional[str] = attr.field(eq=False, hash=False, repr=False)
-    """The CDN's hash of this application's cover image, used in the store or for embedded games."""
+    """The CDN's hash of this application's default rich presence invite cover image."""
 
     terms_of_service_url: typing.Optional[str] = attr.field(eq=False, hash=False, repr=False)
     """The URL of this application's terms of service."""
@@ -586,7 +583,7 @@ class Application(guilds.PartialApplication):
 
     @property
     def cover_image_url(self) -> typing.Optional[files.URL]:
-        """Cover image URL used in the store or for embedded games.
+        """Rich presence cover image URL for this application, if set.
 
         Returns
         -------
@@ -596,7 +593,7 @@ class Application(guilds.PartialApplication):
         return self.make_cover_image_url()
 
     def make_cover_image_url(self, *, ext: str = "png", size: int = 4096) -> typing.Optional[files.URL]:
-        """Generate the cover image URL used in the store or for embedded games, if set.
+        """Generate the rich presence cover image URL for this application, if set.
 
         Parameters
         ----------
@@ -628,76 +625,6 @@ class Application(guilds.PartialApplication):
             size=size,
             file_format=ext,
         )
-
-    async def fetch_guild(self) -> typing.Optional[guilds.RESTGuild]:
-        """Fetch the guild this application is linked to if sold on Discord.
-
-        Returns
-        -------
-        typing.Optional[hikari.guilds.RESTGuild]
-            The requested guild if the application is linked to a guild, else `builtins.None`.
-
-        Raises
-        ------
-        hikari.errors.ForbiddenError
-            If you are not part of the guild.
-        hikari.errors.NotFoundError
-            If the guild is not found.
-        hikari.errors.UnauthorizedError
-            If you are unauthorized to make the request (invalid/missing token).
-        hikari.errors.RateLimitTooLongError
-            Raised in the event that a rate limit occurs that is
-            longer than `max_rate_limit` when making a request.
-        hikari.errors.RateLimitedError
-            Usually, Hikari will handle and retry on hitting
-            rate-limits automatically. This includes most bucket-specific
-            rate-limits and global rate-limits. In some rare edge cases,
-            however, Discord implements other undocumented rules for
-            rate-limiting, such as limits per attribute. These cannot be
-            detected or handled normally by Hikari due to their undocumented
-            nature, and will trigger this exception if they occur.
-        hikari.errors.InternalServerError
-            If an internal error occurs on Discord while handling the request.
-        """
-        if self.guild_id is not None:
-            return await self.app.rest.fetch_guild(self.guild_id)
-        return None
-
-    async def fetch_guild_preview(self) -> typing.Optional[guilds.GuildPreview]:
-        """Fetch the preview of the guild this application is linked to if sold on Discord.
-
-        Returns
-        -------
-        typing.Optional[hikari.guilds.GuildPreview]
-            The requested guild preview if the application is linked to a guild, else `builtins.None`.
-
-        !!! note
-            This will only work if you are a part of that guild or it is public.
-
-        Raises
-        ------
-        hikari.errors.NotFoundError
-            If the guild is not found or you are not part of the guild.
-        hikari.errors.UnauthorizedError
-            If you are unauthorized to make the request (invalid/missing token).
-        hikari.errors.RateLimitTooLongError
-            Raised in the event that a rate limit occurs that is
-            longer than `max_rate_limit` when making a request.
-        hikari.errors.RateLimitedError
-            Usually, Hikari will handle and retry on hitting
-            rate-limits automatically. This includes most bucket-specific
-            rate-limits and global rate-limits. In some rare edge cases,
-            however, Discord implements other undocumented rules for
-            rate-limiting, such as limits per attribute. These cannot be
-            detected or handled normally by Hikari due to their undocumented
-            nature, and will trigger this exception if they occur.
-        hikari.errors.InternalServerError
-            If an internal error occurs on Discord while handling the request.
-        """
-        if self.guild_id is not None:
-            return await self.app.rest.fetch_guild_preview(self.guild_id)
-
-        return None
 
 
 @attr_extensions.with_copy

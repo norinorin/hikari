@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-__all__: typing.List[str] = [
+__all__: typing.Sequence[str] = (
     "AuditLog",
     "AuditLogChange",
     "AuditLogChangeKey",
@@ -38,7 +38,7 @@ __all__: typing.List[str] = [
     "MessageBulkDeleteEntryInfo",
     "MessageDeleteEntryInfo",
     "MessagePinEntryInfo",
-]
+)
 
 import abc
 import typing
@@ -487,7 +487,7 @@ class AuditLogEntry(snowflakes.Unique):
 @attr_extensions.with_copy
 @attr.define(hash=False, kw_only=True, repr=False, weakref_slot=False)
 class AuditLog(typing.Sequence[AuditLogEntry]):
-    """Represents a guilds audit log."""
+    """Represents a guilds audit log's page."""
 
     entries: typing.Mapping[snowflakes.Snowflake, AuditLogEntry] = attr.field(repr=False)
     """A mapping of snowflake IDs to the audit log's entries."""

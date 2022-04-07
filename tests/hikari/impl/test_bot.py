@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +29,13 @@ import mock
 import pytest
 
 from hikari import applications
-from hikari import config
 from hikari import errors
 from hikari import presences
 from hikari import snowflakes
 from hikari import undefined
 from hikari.impl import bot as bot_impl
 from hikari.impl import cache as cache_impl
+from hikari.impl import config
 from hikari.impl import entity_factory as entity_factory_impl
 from hikari.impl import event_factory as event_factory_impl
 from hikari.impl import event_manager as event_manager_impl
@@ -44,6 +44,51 @@ from hikari.impl import shard as shard_impl
 from hikari.impl import voice as voice_impl
 from hikari.internal import aio
 from hikari.internal import ux
+
+
+@pytest.mark.parametrize("activity", [undefined.UNDEFINED, None])
+def test_validate_activity_when_no_activity(activity):
+    with mock.patch.object(warnings, "warn") as warn:
+        bot_impl._validate_activity(activity)
+
+    warn.assert_not_called()
+
+
+def test_validate_activity_when_type_is_custom():
+    activity = presences.Activity(name="test", type=presences.ActivityType.CUSTOM)
+
+    with mock.patch.object(warnings, "warn") as warn:
+        bot_impl._validate_activity(activity)
+
+    warn.assert_called_once_with(
+        "The CUSTOM activity type is not supported by bots at the time of writing, and may therefore not have "
+        "any effect if used.",
+        category=errors.HikariWarning,
+        stacklevel=3,
+    )
+
+
+def test_validate_activity_when_type_is_streaming_but_no_url():
+    activity = presences.Activity(name="test", url=None, type=presences.ActivityType.STREAMING)
+
+    with mock.patch.object(warnings, "warn") as warn:
+        bot_impl._validate_activity(activity)
+
+    warn.assert_called_once_with(
+        "The STREAMING activity type requires a 'url' parameter pointing to a valid Twitch or YouTube video "
+        "URL to be specified on the activity for the presence update to have any effect.",
+        category=errors.HikariWarning,
+        stacklevel=3,
+    )
+
+
+def test_validate_activity_when_no_warning():
+    activity = presences.Activity(name="test", type=presences.ActivityType.PLAYING)
+
+    with mock.patch.object(warnings, "warn") as warn:
+        bot_impl._validate_activity(activity)
+
+    warn.assert_not_called()
 
 
 class TestGatewayBot:
@@ -159,7 +204,9 @@ class TestGatewayBot:
         assert bot._cache is cache.return_value
         cache.assert_called_once_with(bot, cache_settings)
         assert bot._event_manager is event_manager.return_value
-        event_manager.assert_called_once_with(event_factory.return_value, intents, cache=cache.return_value)
+        event_manager.assert_called_once_with(
+            entity_factory.return_value, event_factory.return_value, intents, cache=cache.return_value
+        )
         assert bot._entity_factory is entity_factory.return_value
         entity_factory.assert_called_once_with(bot)
         assert bot._event_factory is event_factory.return_value
@@ -206,6 +253,18 @@ class TestGatewayBot:
         proxy_settings.assert_called_once_with()
         cache.assert_called_once_with(bot, cache_settings.return_value)
         cache_settings.assert_called_once_with()
+
+    def test_init_strips_token(self):
+        stack = contextlib.ExitStack()
+        stack.enter_context(mock.patch.object(ux, "init_logging"))
+        stack.enter_context(mock.patch.object(bot_impl.GatewayBot, "print_banner"))
+
+        with stack:
+            bot = bot_impl.GatewayBot(
+                "\n\r token yeet \r\n", cache_settings=None, http_settings=None, proxy_settings=None
+            )
+
+        assert bot._token == "token yeet"
 
     def test_cache(self, bot, cache):
         assert bot.cache is cache
@@ -315,7 +374,8 @@ class TestGatewayBot:
         assert bot._is_alive is True
 
     @pytest.mark.asyncio()
-    async def test__close(self, bot, event_manager, event_factory, rest, voice, cache):
+    @pytest.mark.parametrize("is_alive", [True, False])
+    async def test__close(self, bot, event_manager, event_factory, rest, voice, cache, is_alive):
         def null_call(arg):
             return arg
 
@@ -352,7 +412,7 @@ class TestGatewayBot:
         voice.close = AwaitableMock()
         bot._closing_event = closing_event = mock.Mock(is_set=mock.Mock(return_value=False))
         bot._closed_event = None
-        bot._is_alive = True
+        bot._is_alive = is_alive
         error = RuntimeError()
         shard0 = mock.Mock(id=0, close=AwaitableMock())
         shard1 = mock.Mock(id=1, close=AwaitableMock(error))
@@ -378,7 +438,6 @@ class TestGatewayBot:
                 mock.call(shard1.close()),
                 mock.call(shard2.close()),
             ],
-            any_order=False,
         )
 
         rest.close.assert_awaited_once()
@@ -401,14 +460,16 @@ class TestGatewayBot:
         assert bot._shards == {}
         cache.clear.assert_called_once_with()
 
-        # Dispatching events in the right order
-        event_manager.dispatch.assert_has_calls(
-            [
-                mock.call(event_factory.deserialize_stopping_event.return_value),
-                mock.call(event_factory.deserialize_stopped_event.return_value),
-            ],
-            any_order=False,
-        )
+        if is_alive:
+            # Dispatching events in the right order
+            event_manager.dispatch.assert_has_calls(
+                [
+                    mock.call(event_factory.deserialize_stopping_event.return_value),
+                    mock.call(event_factory.deserialize_stopped_event.return_value),
+                ],
+            )
+        else:
+            event_manager.dispatch.assert_not_called()
 
     def test_dispatch(self, bot, event_manager):
         event = object()
@@ -471,9 +532,9 @@ class TestGatewayBot:
 
     def test_print_banner(self, bot):
         with mock.patch.object(ux, "print_banner") as print_banner:
-            bot.print_banner("testing", False, True)
+            bot.print_banner("testing", False, True, extra_args={"test_key": "test_value"})
 
-        print_banner.assert_called_once_with("testing", False, True)
+        print_banner.assert_called_once_with("testing", False, True, extra_args={"test_key": "test_value"})
 
     def test_run_when_already_running(self, bot):
         bot._is_alive = True
@@ -575,7 +636,7 @@ class TestGatewayBot:
         stack.enter_context(mock.patch.object(bot_impl.GatewayBot, "start", new=mock.Mock()))
         stack.enter_context(mock.patch.object(bot_impl.GatewayBot, "join", new=mock.Mock()))
         stack.enter_context(mock.patch.object(bot_impl.GatewayBot, "_close", new=mock.Mock()))
-        destroy_loop = stack.enter_context(mock.patch.object(bot_impl.GatewayBot, "_destroy_loop"))
+        destroy_loop = stack.enter_context(mock.patch.object(bot_impl, "_destroy_loop"))
         loop = stack.enter_context(mock.patch.object(aio, "get_or_make_loop")).return_value
 
         with stack:
@@ -726,7 +787,7 @@ class TestGatewayBot:
 
         with mock.patch.object(bot_impl.GatewayBot, "_check_if_alive") as check_if_alive:
             with mock.patch.object(aio, "all_of") as all_of:
-                with mock.patch.object(bot_impl.GatewayBot, "_validate_activity") as validate_activity:
+                with mock.patch.object(bot_impl, "_validate_activity") as validate_activity:
                     await bot.update_presence(status=status, activity=activity, idle_since=idle_since, afk=afk)
 
         check_if_alive.assert_called_once_with()
@@ -857,44 +918,3 @@ class TestGatewayBot:
                         url="https://some.website",
                         closing_event=bot._closing_event,
                     )
-
-    @pytest.mark.parametrize("activity", [undefined.UNDEFINED, None])
-    def test_validate_activity_when_no_activity(self, bot, activity):
-        with mock.patch.object(warnings, "warn") as warn:
-            bot._validate_activity(activity)
-
-        warn.assert_not_called()
-
-    def test_validate_activity_when_type_is_custom(self, bot):
-        activity = presences.Activity(name="test", type=presences.ActivityType.CUSTOM)
-
-        with mock.patch.object(warnings, "warn") as warn:
-            bot._validate_activity(activity)
-
-        warn.assert_called_once_with(
-            "The CUSTOM activity type is not supported by bots at the time of writing, and may therefore not have "
-            "any effect if used.",
-            category=errors.HikariWarning,
-            stacklevel=3,
-        )
-
-    def test_validate_activity_when_type_is_streaming_but_no_url(self, bot):
-        activity = presences.Activity(name="test", url=None, type=presences.ActivityType.STREAMING)
-
-        with mock.patch.object(warnings, "warn") as warn:
-            bot._validate_activity(activity)
-
-        warn.assert_called_once_with(
-            "The STREAMING activity type requires a 'url' parameter pointing to a valid Twitch or YouTube video "
-            "URL to be specified on the activity for the presence update to have any effect.",
-            category=errors.HikariWarning,
-            stacklevel=3,
-        )
-
-    def test_validate_activity_when_no_warning(self, bot):
-        activity = presences.Activity(name="test", type=presences.ActivityType.PLAYING)
-
-        with mock.patch.object(warnings, "warn") as warn:
-            bot._validate_activity(activity)
-
-        warn.assert_not_called()

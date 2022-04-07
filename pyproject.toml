@@ -1,5 +1,5 @@
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,6 @@ include = ".*pyi?$"
 target-version = ["py38"]
 
 [tool.coverage.run]
-concurrency = ["multiprocessing"]
 parallel = true
 branch = true
 timid = false
@@ -44,10 +43,10 @@ show_missing = true
 skip_covered = false
 sort = "cover"
 exclude_lines = [
-    "\\#\\s*pragma: no cover",
-    "^\\s*raise AssertionError\b",
-    "^\\s*raise NotImplementedError\b",
-    "^\\s*return NotImplemented\b",
+    "\\#\\s*pragma: no cover$",
+    "^\\s*raise AssertionError$",
+    "^\\s*raise NotImplementedError$",
+    "^\\s*return NotImplemented$",
     "^\\s*raise$",
     "^\\s*pass$",
     "^if __name__ == ['\"]__main__['\"]:$",
@@ -65,7 +64,7 @@ pythonVersion = "3.8"
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
-[pytest]
+asyncio_mode = "strict"
 xfail_strict = true
 norecursedirs = [
     "docs",
@@ -79,7 +78,8 @@ norecursedirs = [
     "public",
     "ci",
 ]
-filterwarnings = ["ignore:.*\"@coroutine\" decorator is deprecated.*:DeprecationWarning"]
+filterwarnings = ["ignore:.*assertions not in test modules or plugins will be ignored because assert statements are not executed by the underlying Python interpreter.*:pytest.PytestConfigWarning"]
+required_plugins = ["pytest-asyncio"]
 
 [tool.towncrier]
 package = "hikari"
@@ -133,3 +133,14 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = 'rillrate.*'
 ignore_missing_imports = true
+
+[tool.slotscheck]
+strict-imports = true
+require-superclass = true
+require-subclass = true
+exclude-classes = """
+(
+    ^hikari\\.internal\\.enums:(Enum|Flag|_EnumMeta|_FlagMeta)$
+    |^hikari\\.files:MultiprocessingFileReader$
+)
+"""

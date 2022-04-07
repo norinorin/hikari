@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -175,7 +175,6 @@ class TestInviteEvent:
         event.app.rest.fetch_invite.assert_awaited_once_with("Jx4cNGG")
 
 
-@pytest.mark.asyncio()
 class TestInviteCreateEvent:
     @pytest.fixture()
     def event(self):
@@ -184,14 +183,17 @@ class TestInviteCreateEvent:
     def test_app_property(self, event):
         assert event.app is event.invite.app
 
+    @pytest.mark.asyncio()
     async def test_channel_id_property(self, event):
         event.invite.channel_id = 123
         assert event.channel_id == 123
 
+    @pytest.mark.asyncio()
     async def test_guild_id_property(self, event):
         event.invite.guild_id = 123
         assert event.guild_id == 123
 
+    @pytest.mark.asyncio()
     async def test_code_property(self, event):
         event.invite.code = "Jx4cNGG"
         assert event.code == "Jx4cNGG"

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-__all__: typing.List[str] = ["generate_error_response", "create_client_session"]
+__all__: typing.Sequence[str] = ("generate_error_response", "create_client_session")
 
 import http
 import typing
@@ -34,7 +34,7 @@ import aiohttp
 from hikari import errors
 
 if typing.TYPE_CHECKING:
-    from hikari import config
+    from hikari.impl import config
     from hikari.internal import data_binding
 
 
@@ -62,7 +62,10 @@ async def generate_error_response(response: aiohttp.ClientResponse) -> errors.HT
     if response.status == http.HTTPStatus.NOT_FOUND:
         return errors.NotFoundError(*args)
 
-    status = http.HTTPStatus(response.status)
+    try:
+        status: typing.Union[http.HTTPStatus, int] = http.HTTPStatus(response.status)
+    except ValueError:
+        status = response.status
 
     if 400 <= status < 500:
         return errors.ClientHTTPResponseError(real_url, status, response.headers, raw_body)

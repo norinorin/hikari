@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 """Data binding utilities."""
 from __future__ import annotations
 
-__all__: typing.List[str] = [
+__all__: typing.Sequence[str] = (
     "Headers",
     "Query",
     "JSONObject",
@@ -34,7 +34,7 @@ __all__: typing.List[str] = [
     "JSONDecodeError",
     "JSONObjectBuilder",
     "URLEncodedFormBuilder",
-]
+)
 
 import typing
 
@@ -46,10 +46,10 @@ from hikari import snowflakes
 from hikari import undefined
 
 if typing.TYPE_CHECKING:
-    import concurrent
+    import concurrent.futures
     import contextlib
 
-    T = typing.TypeVar("T", covariant=True)
+    T_co = typing.TypeVar("T_co", covariant=True)
 
 Headers = typing.Mapping[str, str]
 """Type hint for HTTP headers."""
@@ -87,9 +87,11 @@ if typing.TYPE_CHECKING:
 
     def dump_json(_: typing.Union[JSONArray, JSONObject], /, *, indent: int = ...) -> str:
         """Convert a Python type to a JSON string."""
+        raise NotImplementedError
 
     def load_json(_: typing.AnyStr, /) -> typing.Union[JSONArray, JSONObject]:
         """Convert a JSON string to a Python type."""
+        raise NotImplementedError
 
 else:
     import json
@@ -170,10 +172,10 @@ class StringMapBuilder(multidict.MultiDict[str]):
     def put(
         self,
         key: str,
-        value: undefined.UndefinedOr[T],
+        value: undefined.UndefinedOr[T_co],
         /,
         *,
-        conversion: typing.Callable[[T], Stringish],
+        conversion: typing.Callable[[T_co], Stringish],
     ) -> None:
         ...
 
@@ -255,10 +257,10 @@ class JSONObjectBuilder(typing.Dict[str, JSONish]):
     def put(
         self,
         key: str,
-        value: undefined.UndefinedNoneOr[T],
+        value: undefined.UndefinedNoneOr[T_co],
         /,
         *,
-        conversion: typing.Callable[[T], JSONish],
+        conversion: typing.Callable[[T_co], JSONish],
     ) -> None:
         ...
 
@@ -291,10 +293,10 @@ class JSONObjectBuilder(typing.Dict[str, JSONish]):
         if value is undefined.UNDEFINED:
             return
 
-        if conversion is not None:
-            self[key] = conversion(value)
-        else:
+        if conversion is None or value is None:
             self[key] = value
+        else:
+            self[key] = conversion(value)
 
     @typing.overload
     def put_array(
@@ -309,10 +311,10 @@ class JSONObjectBuilder(typing.Dict[str, JSONish]):
     def put_array(
         self,
         key: str,
-        values: undefined.UndefinedOr[typing.Iterable[T]],
+        values: undefined.UndefinedOr[typing.Iterable[T_co]],
         /,
         *,
-        conversion: typing.Callable[[T], JSONish],
+        conversion: typing.Callable[[T_co], JSONish],
     ) -> None:
         ...
 
@@ -334,7 +336,7 @@ class JSONObjectBuilder(typing.Dict[str, JSONish]):
         ----------
         key : builtins.str
             The key to give the element.
-        values : hikari.undefined.UndefinedOr[typing.Iterable[T]]
+        values : hikari.undefined.UndefinedOr[typing.Iterable[T_co]]
             The JSON types to put. This may be an iterable of non-JSON types if
             a conversion is also specified. This may alternatively be undefined.
             In the latter case, nothing is performed.

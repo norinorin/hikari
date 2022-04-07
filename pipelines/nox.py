@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ from nox.sessions import Session
 from pipelines import config
 
 # Default sessions should be defined here
-_options.sessions = ["reformat-code", "pytest", "flake8", "mypy", "verify-types", "safety", "pages"]
+_options.sessions = ["reformat-code", "pytest", "flake8", "slotscheck", "mypy", "verify-types"]
 
 _NoxCallbackSig = typing.Callable[[Session], None]
 

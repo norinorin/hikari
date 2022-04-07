@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 from __future__ import annotations
 
-__all__: typing.List[str] = [
+__all__: typing.Sequence[str] = (
     "ChannelType",
     "VideoQualityMode",
     "ChannelFollow",
@@ -40,12 +40,11 @@ __all__: typing.List[str] = [
     "GuildChannel",
     "GuildTextChannel",
     "GuildNewsChannel",
-    "GuildStoreChannel",
     "GuildVoiceChannel",
     "GuildStageChannel",
     "WebhookChannelT",
     "WebhookChannelTypes",
-]
+)
 
 import typing
 
@@ -96,9 +95,6 @@ class ChannelType(int, enums.Enum):
 
     GUILD_NEWS = 5
     """A channel that can be followed and can crosspost."""
-
-    GUILD_STORE = 6
-    """A channel that show's a game's store page."""
 
     GUILD_STAGE = 13
     """A few to many voice channel for hosting events."""
@@ -481,7 +477,6 @@ class TextableChannel(PartialChannel):
         components: undefined.UndefinedOr[typing.Sequence[special_endpoints.ComponentBuilder]] = undefined.UNDEFINED,
         embed: undefined.UndefinedOr[embeds_.Embed] = undefined.UNDEFINED,
         embeds: undefined.UndefinedOr[typing.Sequence[embeds_.Embed]] = undefined.UNDEFINED,
-        nonce: undefined.UndefinedOr[str] = undefined.UNDEFINED,
         tts: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
         reply: undefined.UndefinedOr[snowflakes.SnowflakeishOr[messages.PartialMessage]] = undefined.UNDEFINED,
         mentions_everyone: undefined.UndefinedOr[bool] = undefined.UNDEFINED,
@@ -530,9 +525,6 @@ class TextableChannel(PartialChannel):
             If provided, the message embeds.
         tts : hikari.undefined.UndefinedOr[builtins.bool]
             If provided, whether the message will be TTS (Text To Speech).
-        nonce : hikari.undefined.UndefinedOr[builtins.str]
-            If provided, a nonce that can be used for optimistic message
-            sending.
         reply : hikari.undefined.UndefinedOr[hikari.snowflakes.SnowflakeishOr[hikari.messages.PartialMessage]]
             If provided, the message to reply to.
         mentions_everyone : hikari.undefined.UndefinedOr[builtins.bool]
@@ -622,7 +614,6 @@ class TextableChannel(PartialChannel):
             components=components,
             embed=embed,
             embeds=embeds,
-            nonce=nonce,
             tts=tts,
             reply=reply,
             mentions_everyone=mentions_everyone,
@@ -974,6 +965,19 @@ class GuildChannel(PartialChannel):
 
         return None
 
+    def get_guild(self) -> typing.Optional[guilds.GatewayGuild]:
+        """Return the guild linked to this channel.
+
+        Returns
+        -------
+        typing.Optional[hikari.guilds.Guild]
+            The linked guild object or `builtins.None` if it's not cached.
+        """
+        if not isinstance(self.app, traits.CacheAware):
+            return None
+
+        return self.app.cache.get_guild(self.guild_id)
+
     async def fetch_guild(self) -> guilds.PartialGuild:
         """Fetch the guild linked to this channel.
 
@@ -1080,9 +1084,7 @@ class GuildChannel(PartialChannel):
 
     async def remove_overwrite(
         self,
-        target: snowflakes.SnowflakeishOr[
-            typing.Union[PermissionOverwrite, guilds.PartialRole, users.PartialUser, snowflakes.Snowflakeish]
-        ],
+        target: typing.Union[PermissionOverwrite, guilds.PartialRole, users.PartialUser, snowflakes.Snowflakeish],
     ) -> None:
         """Delete a custom permission for an entity in a given guild channel.
 
@@ -1282,16 +1284,6 @@ class GuildNewsChannel(TextableGuildChannel):
     !!! note
         This may be `builtins.None` in several cases; Discord does not document what
         these cases are. Trust no one!
-    """
-
-
-@attr.define(hash=True, kw_only=True, weakref_slot=False)
-class GuildStoreChannel(GuildChannel):
-    """Represents a store channel.
-
-    These were originally used to sell games when Discord had a game store. This
-    was scrapped at the end of 2019, so these may disappear from the platform
-    eventually.
     """
 
 

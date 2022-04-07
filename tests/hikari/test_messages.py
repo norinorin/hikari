@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -64,9 +64,7 @@ class TestMessageApplication:
             name="test app",
             description="",
             icon_hash="123abc",
-            summary="some summary",
             cover_image_hash="abc123",
-            primary_sku_id=456,
         )
 
     def test_cover_image_url(self, message_application):
@@ -239,7 +237,6 @@ class TestAsyncMessage:
             attachments=attachments,
             component=component,
             components=components,
-            nonce="nonce",
             tts=True,
             reply=reference_messsage,
             mentions_everyone=True,
@@ -256,7 +253,6 @@ class TestAsyncMessage:
             attachments=attachments,
             component=component,
             components=components,
-            nonce="nonce",
             tts=True,
             reply=reference_messsage,
             mentions_everyone=True,
@@ -279,7 +275,6 @@ class TestAsyncMessage:
             attachments=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
-            nonce=undefined.UNDEFINED,
             tts=undefined.UNDEFINED,
             reply=message,
             mentions_everyone=undefined.UNDEFINED,
@@ -302,7 +297,6 @@ class TestAsyncMessage:
             attachments=undefined.UNDEFINED,
             component=undefined.UNDEFINED,
             components=undefined.UNDEFINED,
-            nonce=undefined.UNDEFINED,
             tts=undefined.UNDEFINED,
             reply=undefined.UNDEFINED,
             mentions_everyone=undefined.UNDEFINED,

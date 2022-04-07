@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # Copyright (c) 2020 Nekokatt
-# Copyright (c) 2021 davfsa
+# Copyright (c) 2021-present davfsa
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ relying on a distributed event bus or cache.
 from __future__ import annotations
 
 from hikari.api.cache import *
+from hikari.api.config import *
 from hikari.api.entity_factory import *
 from hikari.api.event_factory import *
 from hikari.api.event_manager import *
